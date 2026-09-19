@@ -1,0 +1,60 @@
+name: rivon
+
+x-app-env: &app-env
+  RIVON_ENV: ${RIVON_ENV:-local}
+  RIVON_DATABASE_URL: postgresql+asyncpg://rivon_app:${RIVON_DB_APP_PASSWORD:?}@postgres:5432/rivon
+  RIVON_MIGRATION_DATABASE_URL: postgresql+asyncpg://rivon_owner:${RIVON_DB_OWNER_PASSWORD:?}@postgres:5432/rivon
+  RIVON_REDIS_URL: redis://redis:6379/0
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      RIVON_DB_OWNER_PASSWORD: ${RIVON_DB_OWNER_PASSWORD:?}
+      RIVON_DB_APP_PASSWORD: ${RIVON_DB_APP_PASSWORD:?}
+    ports:
+      - "5433:5432"  # 5433 on the host so a local Postgres on 5432 doesn't clash
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # -h forces TCP: during first-run init the server only listens on the socket.
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-U", "postgres", "-d", "rivon"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  redis:
+    image: redis:7
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  migrate:
+    build: .
+    image: rivon-api
+    command: ["alembic", "upgrade", "head"]
+    environment: *app-env
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    image: rivon-api
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+volumes:
+  pgdata:
