@@ -9,7 +9,7 @@ from redis.asyncio import Redis
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
-from rivon.config import get_settings
+from rivon.config import Settings, get_settings
 from rivon.business import api as business_api
 from rivon.db import create_engine
 from rivon.platform import api as platform_api
@@ -37,9 +37,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         await engine.dispose()
 
 
-app = FastAPI(title="Rivon", lifespan=lifespan)
-app.include_router(platform_api.router)
-app.include_router(business_api.router)
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or get_settings()
+    # The API is private (no public sign-up). In production don't publish a map
+    # of every endpoint and field: it only helps someone probing the service.
+    published = settings.env != "production"
+    app = FastAPI(
+        title="Rivon",
+        lifespan=lifespan,
+        docs_url="/docs" if published else None,
+        redoc_url="/redoc" if published else None,
+        openapi_url="/openapi.json" if published else None,
+    )
+    app.include_router(platform_api.router)
+    app.include_router(business_api.router)
+    return app
+
+
+app = create_app()
 
 
 class HealthResponse(BaseModel):
