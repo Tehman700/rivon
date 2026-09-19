@@ -27,9 +27,14 @@ Prices are never calculated here, only shown: pricing is deterministic Python.
 
 ## Brand
 
-The mark (`src/components/brand/logo.tsx`, `src/app/icon.svg`,
-`public/rivon-mark.svg`, `public/rivon-logo.svg`) is an "R" whose leg runs out
-as an amber stream. Keep the four files in sync.
+The mark is traced from `design-files/Rivon Logo with Integrated Spark
+Element.png`: a hub with spokes out to connected nodes, plus a few short
+"spark" stubs. Blue nodes and links use the brand blue (`#59b7f8`, the
+`--brand` token); neutral nodes use `currentColor` so the mark reads on light
+and dark surfaces. The wordmark is light-weight text.
+
+Keep these in sync: `src/components/brand/logo.tsx`, `src/app/icon.svg`,
+`public/rivon-mark.svg`, `public/rivon-logo.svg`.
 
 ## Deploying
 

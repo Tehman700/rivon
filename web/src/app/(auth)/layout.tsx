@@ -33,7 +33,7 @@ export default function AuthLayout({ children }: LayoutProps<"/">) {
   )
 }
 
-/** Decorative stream lines echoing the logo's amber flow. */
+/** Decorative lines echoing the logo's spokes. */
 function FlowLines() {
   return (
     <svg
@@ -47,7 +47,7 @@ function FlowLines() {
           key={i}
           d={`M-20 ${90 + i * 38} C 100 ${40 + i * 38}, 180 ${180 + i * 30}, 420 ${110 + i * 40}`}
           fill="none"
-          stroke={i === 2 ? "oklch(0.782 0.158 72.3)" : "oklch(1 0 0 / 0.12)"}
+          stroke={i === 2 ? "var(--brand)" : "oklch(1 0 0 / 0.12)"}
           strokeWidth={i === 2 ? 2 : 1}
         />
       ))}
