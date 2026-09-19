@@ -93,6 +93,9 @@ class RefreshToken(BaseMixin, TenantScopedMixin, Base):
     token_hash: Mapped[str] = mapped_column(String(64))
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Set when revoked by rotation (a successor was issued), as opposed to by
+    # logout, password reset or reuse detection.
+    rotated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     @declared_attr.directive
     def __table_args__(cls) -> tuple[Any, ...]:

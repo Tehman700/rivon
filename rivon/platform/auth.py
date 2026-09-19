@@ -160,12 +160,13 @@ async def refresh(
         )
         if row is None or row.expires_at <= _now():
             raise InvalidToken()
-        if row.revoked_at is None:
+        if row.revoked_at is None or await _within_rotation_grace(session, settings, row):
             user = await session.scalar(select(User).where(User.id == row.user_id))
             if user is None:
                 raise InvalidToken()
             await _require_serviceable_tenant(session, settings, user.tenant_id)
-            row.revoked_at = _now()
+            if row.revoked_at is None:
+                row.revoked_at = row.rotated_at = _now()
             return await _issue_tokens(session, user, settings, family_id=row.family_id)
 
         # A revoked token came back: it was stolen or replayed. Kill the whole
@@ -173,6 +174,27 @@ async def refresh(
         await _revoke_family(session, row.family_id)
     # Only reached on reuse, after the revocation above has committed.
     raise InvalidToken()
+
+
+async def _within_rotation_grace(
+    session: AsyncSession, settings: Settings, row: RefreshToken
+) -> bool:
+    """A token rotated moments ago, whose family is still alive, is being used
+    by a second request that raced the first. Not theft: let it refresh."""
+    if row.rotated_at is None:
+        return False
+    if _now() - row.rotated_at > timedelta(seconds=settings.refresh_reuse_grace_seconds):
+        return False
+    live = await session.scalar(
+        select(func.count())
+        .select_from(RefreshToken)
+        .where(
+            RefreshToken.family_id == row.family_id,
+            RefreshToken.revoked_at.is_(None),
+            RefreshToken.expires_at > _now(),
+        )
+    )
+    return bool(live)
 
 
 async def _revoke_family(session: AsyncSession, family_id: uuid.UUID) -> None:

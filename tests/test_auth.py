@@ -181,7 +181,20 @@ def test_opaque_token_parsing() -> None:
 # --- Refresh and logout -------------------------------------------------------
 
 
-async def test_refresh_rotates_and_reuse_revokes_the_family(client: AsyncClient, owner: Owner) -> None:
+async def _age_rotations(sessionmaker: async_sessionmaker[AsyncSession], owner: Owner) -> None:
+    """Move every rotation in the tenant back past the grace window."""
+    async with tenant_transaction(sessionmaker, owner.tenant_id) as session:
+        await session.execute(
+            text(
+                "UPDATE refresh_tokens SET rotated_at = rotated_at - interval '1 hour', "
+                "revoked_at = revoked_at - interval '1 hour' WHERE rotated_at IS NOT NULL"
+            )
+        )
+
+
+async def test_refresh_rotates_and_reuse_revokes_the_family(
+    client: AsyncClient, owner: Owner, app_sessionmaker: async_sessionmaker[AsyncSession]
+) -> None:
     first = await _tokens(client, owner)
 
     rotated = await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
@@ -190,12 +203,37 @@ async def test_refresh_rotates_and_reuse_revokes_the_family(client: AsyncClient,
     assert second["refresh_token"] != first["refresh_token"]
     assert (await _me(client, second["access_token"])).status_code == 200
 
-    # Replaying the first (already used) token is treated as theft...
+    await _age_rotations(app_sessionmaker, owner)
+    # Replaying the first (already used) token after the grace window is theft...
     replay = await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
     assert replay.status_code == 401
     # ...so the legitimate newer token is revoked too.
     after = await client.post("/auth/refresh", json={"refresh_token": second["refresh_token"]})
     assert after.status_code == 401
+
+
+async def test_concurrent_refresh_within_grace_keeps_the_session(
+    client: AsyncClient, owner: Owner
+) -> None:
+    """Two browser requests refreshing with the same token at once must not
+    sign the user out."""
+    first = await _tokens(client, owner)
+    a = await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
+    b = await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
+    assert a.status_code == b.status_code == 200
+    assert a.json()["refresh_token"] != b.json()["refresh_token"]
+    for pair in (a.json(), b.json()):
+        again = await client.post("/auth/refresh", json={"refresh_token": pair["refresh_token"]})
+        assert again.status_code == 200
+
+
+async def test_no_grace_after_logout(client: AsyncClient, owner: Owner) -> None:
+    first = await _tokens(client, owner)
+    second = (await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})).json()
+    await client.post("/auth/logout", json={"refresh_token": second["refresh_token"]})
+    # Within the grace window, but the family is dead: no new tokens.
+    replay = await client.post("/auth/refresh", json={"refresh_token": first["refresh_token"]})
+    assert replay.status_code == 401
 
 
 async def test_refresh_rejects_tampered_and_expired_tokens(

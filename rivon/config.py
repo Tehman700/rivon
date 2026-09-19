@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     jwt_secret: SecretStr = Field(min_length=32)
     access_token_ttl_seconds: int = 15 * 60
     refresh_token_ttl_days: int = 30
+    # A just-rotated refresh token presented again within this window is treated
+    # as a concurrent refresh (e.g. two browser requests), not as theft.
+    refresh_reuse_grace_seconds: int = 30
     password_reset_ttl_minutes: int = 60
 
     # Where the dashboard lives; used to build links in emails.
