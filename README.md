@@ -22,6 +22,18 @@ Compose starts Postgres 16, Redis 7, a one-shot `migrate` service
 (`alembic upgrade head`) and the API. Host ports are **5433** (Postgres) and
 **6380** (Redis) so they don't clash with local installs.
 
+## Web app
+
+The owner dashboard lives in [`web/`](web/) (Next.js + Tailwind + shadcn/ui). With the
+stack running:
+
+```sh
+cd web && cp .env.example .env.local && npm install && npm run dev   # http://localhost:3000
+```
+
+Sign in as a tenant owner created with `provision-tenant` (below). See
+[`web/README.md`](web/README.md) for how sessions and the API proxy work.
+
 ## Tests
 
 ```sh

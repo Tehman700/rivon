@@ -1,0 +1,199 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Rivon design tokens. Source: design-files/DESIGN-STRUCTURE.md (§3), with the
+ * fixes it lists: every colour in oklch, no hardcoded rgba, brand accent as a token.
+ * Raw values live on :root, are exposed to Tailwind via @theme inline, and are
+ * overridden under .dark (defined, not yet switchable in the UI).
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-geist-sans);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-input-background: var(--input-background);
+  --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Status badge levels (§3.3), reused for setup status and later for lead scores. */
+  --color-level-good-bg: var(--level-good-bg);
+  --color-level-good-text: var(--level-good-text);
+  --color-level-good-border: var(--level-good-border);
+  --color-level-warn-bg: var(--level-warn-bg);
+  --color-level-warn-text: var(--level-warn-text);
+  --color-level-warn-border: var(--level-warn-border);
+  --color-level-bad-bg: var(--level-bad-bg);
+  --color-level-bad-text: var(--level-bad-text);
+  --color-level-bad-border: var(--level-bad-border);
+
+  /* Radius scale from the design system: 6 / 8 / 10 / 14px. */
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+}
+
+:root {
+  --font-size: 14px;
+  --radius: 0.625rem;
+
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.107 0.045 280.7); /* #030213, brand near-black */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.95 0.0058 264.53);
+  --secondary-foreground: oklch(0.107 0.045 280.7);
+  --muted: oklch(0.944 0.005 286.3); /* #ececf0 */
+  --muted-foreground: oklch(0.555 0.026 285.5); /* #717182 */
+  --accent: oklch(0.94 0.006 264.5); /* #e9ebef */
+  --accent-foreground: oklch(0.107 0.045 280.7);
+  --destructive: oklch(0.558 0.214 19.4); /* #d4183d */
+  --destructive-foreground: oklch(1 0 0);
+  --border: oklch(0 0 0 / 10%);
+  --input: oklch(0 0 0 / 10%);
+  --input-background: oklch(0.965 0.003 286.3); /* #f3f3f5 */
+  --ring: oklch(0.708 0 0);
+  /* Rivon's one accent: the amber "flow" in the logo. Used sparingly. */
+  --brand: oklch(0.782 0.158 72.3);
+  --brand-foreground: oklch(0.107 0.045 280.7);
+
+  --chart-1: oklch(0.646 0.222 41.116);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+
+  --sidebar: oklch(0.985 0.002 286);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.107 0.045 280.7);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.944 0.005 286.3);
+  --sidebar-accent-foreground: oklch(0.107 0.045 280.7);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+
+  --level-good-bg: oklch(0.96 0.024 142.5);
+  --level-good-text: oklch(0.3 0.12 142.5);
+  --level-good-border: oklch(0.88 0.048 142.5);
+  --level-warn-bg: oklch(0.97 0.032 65);
+  --level-warn-text: oklch(0.36 0.12 65);
+  --level-warn-border: oklch(0.85 0.08 65);
+  --level-bad-bg: oklch(0.95 0.06 25);
+  --level-bad-text: oklch(0.36 0.18 25);
+  --level-bad-border: oklch(0.82 0.15 25);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.145 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.145 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.637 0.237 25.331);
+  --destructive-foreground: oklch(0.985 0 0);
+  --border: oklch(0.269 0 0);
+  --input: oklch(0.269 0 0);
+  --input-background: oklch(0.205 0 0);
+  --ring: oklch(0.439 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.782 0.158 72.3);
+  --sidebar-primary-foreground: oklch(0.107 0.045 280.7);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.269 0 0);
+  --sidebar-ring: oklch(0.439 0 0);
+  --level-good-bg: oklch(0.2 0.048 142.5);
+  --level-good-text: oklch(0.85 0.08 142.5);
+  --level-good-border: oklch(0.28 0.08 142.5);
+  --level-warn-bg: oklch(0.2 0.06 65);
+  --level-warn-text: oklch(0.88 0.1 65);
+  --level-warn-border: oklch(0.28 0.1 65);
+  --level-bad-bg: oklch(0.2 0.1 25);
+  --level-bad-text: oklch(0.9 0.14 25);
+  --level-bad-border: oklch(0.28 0.14 25);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    /* 1rem = 14px: the whole scale is deliberately compact (§3.1). */
+    font-size: var(--font-size);
+    @apply font-sans;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+  /* 500 is the heaviest weight in the system (§4). */
+  h1, h2, h3, h4 {
+    @apply font-medium tracking-tight;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
+@layer components {
+  .level-good {
+    @apply border-level-good-border bg-level-good-bg text-level-good-text;
+  }
+  .level-warn {
+    @apply border-level-warn-border bg-level-warn-bg text-level-warn-text;
+  }
+  .level-bad {
+    @apply border-level-bad-border bg-level-bad-bg text-level-bad-text;
+  }
+}
