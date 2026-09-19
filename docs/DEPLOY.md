@@ -56,6 +56,12 @@ mkdir -p /usr/local/lib/docker/cli-plugins
 curl -sSL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
   -o /usr/local/lib/docker/cli-plugins/docker-compose
 chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
+# buildx: Amazon Linux's docker package leaves it out, and `compose build` needs it
+BUILDX=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
+  | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+curl -sSL "https://github.com/docker/buildx/releases/download/${BUILDX}/buildx-${BUILDX}.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
+chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 # 2 GB swap so image builds don't run out of memory
 if [ ! -f /swapfile ]; then
   dd if=/dev/zero of=/swapfile bs=1M count=2048
@@ -96,15 +102,16 @@ cloud-init status --wait          # setup finished when this says "done"
 cd /opt/rivon
 ```
 
-Create `/opt/rivon/.env.production` from `.env.production.example`. I'll give you
-the exact contents: the three Neon URLs, the JWT secret, your domain. It is never
-committed, and only this server has it.
+Put the settings at **`/opt/rivon/.env`** (from `.env.production.example`; I'll
+give you the filled-in contents). Compose reads `.env` automatically, so every
+command sees it: naming it anything else means passing `--env-file` to *every*
+command, which is easy to forget. It is never committed; only this server has it.
 
 ```sh
-chmod 600 .env.production
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+chmod 600 .env
+docker compose -f docker-compose.prod.yml up -d --build
 docker compose -f docker-compose.prod.yml ps        # all services up, migrate exited 0
-curl -s https://api.tideover.site/health               # {"status":"ok",...}
+curl -s https://api.tideover.site/health            # {"status":"ok",...}
 ```
 
 Migrations run automatically on every start, before the API accepts traffic.
@@ -112,7 +119,7 @@ Migrations run automatically on every start, before the API accepts traffic.
 ### Create the first business
 
 ```sh
-docker compose -f docker-compose.prod.yml --env-file .env.production \
+docker compose -f docker-compose.prod.yml \
   exec api python -m rivon.platform.cli provision-tenant \
   --name "Their Business" --slug their-business --owner-email owner@tideover.site
 ```
@@ -124,7 +131,7 @@ logs: `docker compose -f docker-compose.prod.yml logs api | tail -20`.
 
 ```sh
 cd /opt/rivon && git pull
-docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ---
@@ -141,8 +148,32 @@ vercel domains add app.tideover.site          # then add the CNAME above
 ```
 
 `vercel.json` already pins functions to Frankfurt. After the domain is live, set
-`RIVON_PUBLIC_APP_URL=https://app.tideover.site` in `.env.production` on the server
+`RIVON_PUBLIC_APP_URL=https://app.tideover.site` in `/opt/rivon/.env` on the server
 and restart, so password-reset emails link to the right place.
+
+---
+
+## Troubleshooting
+
+**`compose build requires buildx 0.17.0 or later`** — Amazon Linux's `docker`
+package has no buildx plugin. On a server built before this was in the user
+data, install it once:
+
+```sh
+BUILDX=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest   | sed -n 's/.*"tag_name": "\([^"]*\)".*//p')
+sudo curl -fsSL "https://github.com/docker/buildx/releases/download/${BUILDX}/buildx-${BUILDX}.linux-amd64"   -o /usr/local/lib/docker/cli-plugins/docker-buildx
+sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
+docker buildx version
+```
+
+**`required variable RIVON_... is missing a value`** — the settings file isn't
+named `.env`, so that particular command didn't load it. Rename it:
+`mv .env.production .env` (then `chmod 600 .env`). `--env-file` applies only to
+the one command it's passed to, not to later ones.
+
+**Certificate not issued** — Caddy needs `api.tideover.site` to resolve to this
+server *before* it asks Let's Encrypt. Check with `dig +short api.tideover.site`,
+then `docker compose -f docker-compose.prod.yml logs caddy`.
 
 ---
 
