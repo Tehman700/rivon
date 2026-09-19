@@ -210,3 +210,58 @@ async def client(
         app.state.email_sender = email_sender
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
             yield http
+
+
+@dataclass(frozen=True)
+class TenantUsers:
+    """A provisioned tenant with an owner, a manager and an agent, and an
+    Authorization header for each."""
+
+    tenant_id: uuid.UUID
+    owner: dict[str, str]
+    manager: dict[str, str]
+    agent: dict[str, str]
+
+
+async def make_tenant(sessionmaker: async_sessionmaker[AsyncSession]) -> TenantUsers:
+    from rivon.platform.auth import provision_tenant
+    from rivon.platform.models import Region, User, UserRole
+    from rivon.platform.security import UNUSABLE_PASSWORD, Principal, create_access_token
+    from rivon.platform.tenancy import tenant_transaction
+
+    settings = get_settings()
+    suffix = uuid.uuid4().hex[:10]
+    tenant = await provision_tenant(
+        sessionmaker, settings, name=f"Tenant {suffix}", slug=f"t-{suffix}", region=Region.EU,
+        owner_email=f"owner-{suffix}@example.com",
+    )
+    users = {UserRole.OWNER: tenant.owner_id}
+    async with tenant_transaction(sessionmaker, tenant.tenant_id) as session:
+        for role in (UserRole.MANAGER, UserRole.AGENT):
+            users[role] = uuid.uuid4()
+            session.add(
+                User(id=users[role], tenant_id=tenant.tenant_id, role=role,
+                     email=f"{role.value}-{suffix}@example.com", password_hash=UNUSABLE_PASSWORD)
+            )
+
+    def header(role: UserRole) -> dict[str, str]:
+        token = create_access_token(
+            Principal(users[role], tenant.tenant_id, role),
+            settings.jwt_secret.get_secret_value(),
+            settings.access_token_ttl_seconds,
+        )
+        return {"Authorization": f"Bearer {token}"}
+
+    return TenantUsers(
+        tenant.tenant_id, header(UserRole.OWNER), header(UserRole.MANAGER), header(UserRole.AGENT)
+    )
+
+
+@pytest.fixture
+async def tenant(app_sessionmaker: async_sessionmaker[AsyncSession]) -> TenantUsers:
+    return await make_tenant(app_sessionmaker)
+
+
+@pytest.fixture
+async def other_tenant(app_sessionmaker: async_sessionmaker[AsyncSession]) -> TenantUsers:
+    return await make_tenant(app_sessionmaker)

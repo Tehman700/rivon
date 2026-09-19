@@ -574,6 +574,7 @@ dependencies = [
     { name = "pyjwt" },
     { name = "redis" },
     { name = "sqlalchemy", extra = ["asyncio"] },
+    { name = "tzdata" },
     { name = "uvicorn" },
 ]
 
@@ -596,6 +597,7 @@ requires-dist = [
     { name = "pyjwt", specifier = ">=2.14.0" },
     { name = "redis", specifier = ">=5.2" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.36" },
+    { name = "tzdata", specifier = ">=2026.4" },
     { name = "uvicorn", specifier = ">=0.32" },
 ]
 

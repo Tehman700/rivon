@@ -56,6 +56,21 @@ chosen, emails are written to the API log (`docker compose logs api`).
 Access tokens are HS256 JWTs carrying the tenant ID; every tenant-scoped request
 runs under that tenant's RLS context.
 
+## Business setup
+
+Reads are open to every role in the tenant; changes are owner-only (until PLT-03).
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /business/profile` | the business profile (404 until set up) |
+| `PUT /business/profile` | create or fully replace it: name, assistant name, contact, address, timezone, weekly opening hours, project size range (kWp) and project value range (EUR) |
+| `GET /business/services` | active services (`?include_archived=true` for all) |
+| `POST /business/services` | add a service (names unique per tenant, ignoring case) |
+| `GET /business/services/{id}` | one service, including archived ones |
+| `PATCH /business/services/{id}` | rename, change description, or archive/restore (`{"archived": true}`) |
+
+Services are archived, never deleted: quotations will keep referring to them.
+
 ## Domain events and workers
 
 Modules talk through events in a transactional outbox (`rivon/events`):

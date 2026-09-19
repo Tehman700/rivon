@@ -10,6 +10,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from rivon.config import get_settings
+from rivon.business import api as business_api
 from rivon.db import create_engine
 from rivon.platform import api as platform_api
 from rivon.platform.email import ConsoleEmailSender
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="Rivon", lifespan=lifespan)
 app.include_router(platform_api.router)
+app.include_router(business_api.router)
 
 
 class HealthResponse(BaseModel):
