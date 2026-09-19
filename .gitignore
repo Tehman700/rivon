@@ -7,3 +7,6 @@ __pycache__/
 .ruff_cache/
 .coverage
 htmlcov/
+
+# Local design reference (not for the public repo)
+design-files/
