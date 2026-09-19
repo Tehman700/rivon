@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Stack + tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Lockfile is up to date
+        run: uv lock --check
+
+      # Dev-only credentials from the example file; CI has no real secrets.
+      - name: Create .env
+        run: cp .env.example .env
+
+      - name: Build images and start the stack
+        run: docker compose up -d --build
+
+      - name: API is healthy (db + redis)
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8000/health; then echo; exit 0; fi
+            sleep 2
+          done
+          echo "API never became healthy"
+          exit 1
+
+      - name: Migrations ran in the stack
+        run: test "$(docker compose ps -a migrate --format '{{.ExitCode}}')" = "0"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Tests
+        run: uv run pytest -v
+
+      - name: Stack logs
+        if: failure()
+        run: docker compose ps -a && docker compose logs
