@@ -43,6 +43,16 @@ jobs:
       - name: Migrations ran in the stack
         run: test "$(docker compose ps -a migrate --format '{{.ExitCode}}')" = "0"
 
+      - name: Worker and relay are running
+        run: |
+          sleep 5
+          running=$(docker compose ps --status running --services)
+          for service in worker relay; do
+            echo "$running" | grep -qx "$service" || { echo "$service is not running"; exit 1; }
+          done
+          docker compose logs worker | grep -q "ready"
+          docker compose logs relay | grep -q "relay started"
+
       - name: Install dependencies
         run: uv sync --frozen
 
