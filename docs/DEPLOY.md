@@ -160,8 +160,10 @@ package has no buildx plugin. On a server built before this was in the user
 data, install it once:
 
 ```sh
-BUILDX=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest   | sed -n 's/.*"tag_name": "\([^"]*\)".*//p')
-sudo curl -fsSL "https://github.com/docker/buildx/releases/download/${BUILDX}/buildx-${BUILDX}.linux-amd64"   -o /usr/local/lib/docker/cli-plugins/docker-buildx
+BUILDX=$(curl -fsSL https://api.github.com/repos/docker/buildx/releases/latest \
+  | sed -n 's/.*"tag_name": "\([^"]*\)".*/\1/p')
+sudo curl -fsSL "https://github.com/docker/buildx/releases/download/${BUILDX}/buildx-${BUILDX}.linux-amd64" \
+  -o /usr/local/lib/docker/cli-plugins/docker-buildx
 sudo chmod +x /usr/local/lib/docker/cli-plugins/docker-buildx
 docker buildx version
 ```
