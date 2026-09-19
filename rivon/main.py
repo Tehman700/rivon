@@ -11,6 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 
 from rivon.config import get_settings
 from rivon.db import create_engine
+from rivon.platform import api as platform_api
+from rivon.platform.email import ConsoleEmailSender
 
 HEALTH_CHECK_TIMEOUT_S = 2.0
 
@@ -21,6 +23,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     engine = create_engine(settings.database_url)
     app.state.engine = engine
     app.state.sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
+    app.state.email_sender = ConsoleEmailSender()
     app.state.redis = Redis.from_url(
         settings.redis_url,
         socket_connect_timeout=HEALTH_CHECK_TIMEOUT_S,
@@ -34,6 +37,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Rivon", lifespan=lifespan)
+app.include_router(platform_api.router)
 
 
 class HealthResponse(BaseModel):

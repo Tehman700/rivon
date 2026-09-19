@@ -12,11 +12,15 @@ from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from typing import Annotated
 
+import jwt
 from fastapi import Depends, HTTPException, Request, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncSession, async_sessionmaker
 
+from rivon.config import Settings, get_settings
 from rivon.platform.models import Region, Tenant, TenantStatus
+from rivon.platform.security import Principal, decode_access_token
 
 TENANT_SETTING = "app.current_tenant_id"
 
@@ -43,13 +47,35 @@ class TenantContext:
     session: AsyncSession
 
 
-async def get_current_tenant_id() -> uuid.UUID:
-    """Which tenant the caller acts as.
+_bearer = HTTPBearer(auto_error=False)
 
-    PLT-02 replaces this with the tenant claim from the verified JWT. Until
-    then no request is authenticated, so every tenant-scoped route refuses.
-    """
-    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
+
+def _unauthorized() -> HTTPException:
+    return HTTPException(
+        status.HTTP_401_UNAUTHORIZED,
+        "Authentication required",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+
+
+async def get_current_principal(
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(_bearer)],
+    settings: Annotated[Settings, Depends(get_settings)],
+) -> Principal:
+    """The caller, from a verified access token in the Authorization header."""
+    if credentials is None:
+        raise _unauthorized()
+    try:
+        return decode_access_token(credentials.credentials, settings.jwt_secret.get_secret_value())
+    except jwt.InvalidTokenError:
+        raise _unauthorized() from None
+
+
+async def get_current_tenant_id(
+    principal: Annotated[Principal, Depends(get_current_principal)],
+) -> uuid.UUID:
+    """Which tenant the caller acts as: the tenant claim of their access token."""
+    return principal.tenant_id
 
 
 async def get_tenant_context(

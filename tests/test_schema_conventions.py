@@ -28,7 +28,15 @@ NOT_TENANT_SCOPED = {
 
 # Indexes on tenant-scoped tables that may not lead with tenant_id, and why.
 # Every entry needs a reason a reviewer would accept.
-INDEX_EXCEPTIONS: dict[str, str] = {}
+INDEX_EXCEPTIONS = {
+    "uq_users_email": "login identity: owners sign in with email alone, before the tenant is known",
+}
+
+# RLS policies other than tenant_isolation, and why. Each one widens access, so
+# each must be SELECT-only unless there's a very good reason.
+EXTRA_POLICIES = {
+    ("users", "login_lookup"): "exposes the one user whose email is being logged in",
+}
 
 
 async def _rows(engine: AsyncEngine, sql: str) -> list:
@@ -113,6 +121,16 @@ async def test_every_table_forces_rls_with_tenant_policy(owner_engine: AsyncEngi
     for row in rows:
         assert row.relrowsecurity and row.relforcerowsecurity, f"{row.relname}: RLS not forced"
         assert row.has_policy, f"{row.relname}: no tenant_isolation policy"
+
+
+async def test_only_reviewed_extra_policies_exist(owner_engine: AsyncEngine) -> None:
+    rows = await _rows(
+        owner_engine,
+        "SELECT tablename, policyname, cmd FROM pg_policies WHERE schemaname = 'public'",
+    )
+    extra = {(r.tablename, r.policyname): r.cmd for r in rows if r.policyname != "tenant_isolation"}
+    assert set(extra) == set(EXTRA_POLICIES)
+    assert set(extra.values()) <= {"SELECT"}, f"extra policies must be SELECT-only: {extra}"
 
 
 async def test_indexes_on_tenant_tables_lead_with_tenant_id(owner_engine: AsyncEngine) -> None:

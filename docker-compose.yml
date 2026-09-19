@@ -5,6 +5,7 @@ x-app-env: &app-env
   RIVON_DATABASE_URL: postgresql+asyncpg://rivon_app:${RIVON_DB_APP_PASSWORD:?}@postgres:5432/rivon
   RIVON_MIGRATION_DATABASE_URL: postgresql+asyncpg://rivon_owner:${RIVON_DB_OWNER_PASSWORD:?}@postgres:5432/rivon
   RIVON_REDIS_URL: redis://redis:6379/0
+  RIVON_JWT_SECRET: ${RIVON_JWT_SECRET:?}
 
 services:
   postgres:

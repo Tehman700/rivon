@@ -32,6 +32,30 @@ uv run pytest
 Tests need the compose Postgres and Redis running. They use a separate
 `rivon_test` database, rebuilt from the migrations at the start of every run.
 
+## Tenants and login
+
+Provisioning is invite-only: the team creates tenants.
+
+```sh
+docker compose exec api python -m rivon.platform.cli provision-tenant \
+  --name "Demo Solar" --slug demo-solar --owner-email owner@example.com
+```
+
+The owner gets a "set your password" link by email. Until an email provider is
+chosen, emails are written to the API log (`docker compose logs api`).
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /auth/login` | email + password → access token (15 min) + refresh token (30 days) |
+| `POST /auth/refresh` | rotate: returns a new pair; replaying a used refresh token revokes the whole session family |
+| `POST /auth/logout` | revoke the refresh token's family |
+| `POST /auth/password-reset` | email a reset link (always 202, never reveals whether the email exists) |
+| `POST /auth/password-reset/confirm` | set a new password; signs out all sessions |
+| `GET /auth/me` | the current user |
+
+Access tokens are HS256 JWTs carrying the tenant ID; every tenant-scoped request
+runs under that tenant's RLS context.
+
 ## Database roles
 
 | Role | Used by | Notes |

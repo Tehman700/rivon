@@ -19,9 +19,11 @@ from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
+from httpx import ASGITransport, AsyncClient
 
 from rivon.config import Settings, get_settings
 from rivon.db import create_engine
+from rivon.platform.email import Email
 from rivon.platform.tenancy import set_current_tenant
 
 TEST_DATABASE = "rivon_test"
@@ -148,7 +150,7 @@ async def seed(migrated_database: None, owner_engine: AsyncEngine) -> AsyncItera
     yield seeded
     async with owner_engine.begin() as conn:
         # TRUNCATE is not subject to RLS, so the owner can clear every tenant.
-        await conn.execute(text("TRUNCATE users, tenants"))
+        await conn.execute(text("TRUNCATE tenants CASCADE"))
 
 
 @pytest.fixture
@@ -164,3 +166,29 @@ async def db_session(app_engine: AsyncEngine) -> AsyncIterator[AsyncSession]:
         finally:
             await session.close()
             await transaction.rollback()
+
+
+class CapturingEmailSender:
+    def __init__(self) -> None:
+        self.sent: list[Email] = []
+
+    async def send(self, email: Email) -> None:
+        self.sent.append(email)
+
+
+@pytest.fixture
+def email_sender() -> CapturingEmailSender:
+    return CapturingEmailSender()
+
+
+@pytest.fixture
+async def client(
+    migrated_database: None, email_sender: CapturingEmailSender
+) -> AsyncIterator[AsyncClient]:
+    """The real app, lifespan included, with outgoing email captured."""
+    from rivon.main import app
+
+    async with app.router.lifespan_context(app):
+        app.state.email_sender = email_sender
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as http:
+            yield http

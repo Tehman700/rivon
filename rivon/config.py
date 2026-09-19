@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,15 @@ class Settings(BaseSettings):
     migration_database_url: str
 
     redis_url: str
+
+    # Signs access tokens (HS256). At least 32 characters; rotate by redeploying.
+    jwt_secret: SecretStr = Field(min_length=32)
+    access_token_ttl_seconds: int = 15 * 60
+    refresh_token_ttl_days: int = 30
+    password_reset_ttl_minutes: int = 60
+
+    # Where the dashboard lives; used to build links in emails.
+    public_app_url: str = "http://localhost:3000"
 
 
 @lru_cache

@@ -1,19 +1,7 @@
-from collections.abc import AsyncIterator
-
-import pytest
-from httpx import ASGITransport, AsyncClient
+from httpx import AsyncClient
 from redis.asyncio import Redis
 
 from rivon.main import app
-
-
-@pytest.fixture
-async def client() -> AsyncIterator[AsyncClient]:
-    async with (
-        app.router.lifespan_context(app),
-        AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client,
-    ):
-        yield client
 
 
 async def test_health_ok(client: AsyncClient) -> None:
