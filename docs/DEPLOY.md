@@ -8,8 +8,8 @@ Three pieces, all in the EU:
 | API, worker, relay, Redis | One EC2 server, `eu-central-1` (Frankfurt) | You, in the AWS console |
 | Dashboard | Vercel, `fra1` (Frankfurt) | CLI, after the API is up |
 
-Everything below assumes the domain you own. Replace `example.com` with it.
-`api.example.com` is the backend; `app.example.com` is the dashboard.
+The domain is **tideover.site**: `api.tideover.site` is the backend,
+`app.tideover.site` is the dashboard.
 
 ---
 
@@ -84,7 +84,7 @@ with the `rivon-eu` instance. Without this the address changes on every stop/sta
 | `api` | A | the Elastic IP |
 | `app` | CNAME | `cname.vercel-dns.com` (added in step 4) |
 
-Certificates are issued automatically once `api.example.com` resolves to the server.
+Certificates are issued automatically once `api.tideover.site` resolves to the server.
 
 ---
 
@@ -104,7 +104,7 @@ committed, and only this server has it.
 chmod 600 .env.production
 docker compose -f docker-compose.prod.yml --env-file .env.production up -d --build
 docker compose -f docker-compose.prod.yml ps        # all services up, migrate exited 0
-curl -s https://api.example.com/health               # {"status":"ok",...}
+curl -s https://api.tideover.site/health               # {"status":"ok",...}
 ```
 
 Migrations run automatically on every start, before the API accepts traffic.
@@ -114,7 +114,7 @@ Migrations run automatically on every start, before the API accepts traffic.
 ```sh
 docker compose -f docker-compose.prod.yml --env-file .env.production \
   exec api python -m rivon.platform.cli provision-tenant \
-  --name "Their Business" --slug their-business --owner-email owner@example.com
+  --name "Their Business" --slug their-business --owner-email owner@tideover.site
 ```
 
 Until an email provider is chosen, the "set your password" link is printed in the
@@ -135,13 +135,13 @@ From `web/` on a machine with the Vercel CLI signed in to the Rivon account:
 
 ```sh
 vercel link            # project: rivon
-vercel env add RIVON_API_URL production     # https://api.example.com
+vercel env add RIVON_API_URL production     # https://api.tideover.site
 vercel --prod
-vercel domains add app.example.com          # then add the CNAME above
+vercel domains add app.tideover.site          # then add the CNAME above
 ```
 
 `vercel.json` already pins functions to Frankfurt. After the domain is live, set
-`RIVON_PUBLIC_APP_URL=https://app.example.com` in `.env.production` on the server
+`RIVON_PUBLIC_APP_URL=https://app.tideover.site` in `.env.production` on the server
 and restart, so password-reset emails link to the right place.
 
 ---
