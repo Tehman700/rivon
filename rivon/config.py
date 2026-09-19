@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     # Owner role: owns the schema. Used by Alembic only, never by the app.
     migration_database_url: str
 
+    # Outbox relay role. Only the relay process needs it.
+    relay_database_url: str | None = None
+    relay_poll_interval_seconds: float = 0.5
+    relay_batch_size: int = 100
+
     redis_url: str
 
     # Signs access tokens (HS256). At least 32 characters; rotate by redeploying.

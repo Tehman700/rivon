@@ -7,6 +7,7 @@ x-app-env: &app-env
   RIVON_MIGRATION_DATABASE_URL: postgresql+asyncpg://rivon_owner:${RIVON_DB_OWNER_PASSWORD:?}@postgres:5432/rivon
   RIVON_REDIS_URL: redis://redis:6379/0
   RIVON_JWT_SECRET: ${RIVON_JWT_SECRET:?}
+  RIVON_RELAY_DATABASE_URL: postgresql+asyncpg://rivon_relay:${RIVON_DB_RELAY_PASSWORD:?}@postgres:5432/rivon
 
 services:
   postgres:
@@ -15,6 +16,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
       RIVON_DB_OWNER_PASSWORD: ${RIVON_DB_OWNER_PASSWORD:?}
       RIVON_DB_APP_PASSWORD: ${RIVON_DB_APP_PASSWORD:?}
+      RIVON_DB_RELAY_PASSWORD: ${RIVON_DB_RELAY_PASSWORD:?}
     ports:
       - "5433:5432"  # 5433 on the host so a local Postgres on 5432 doesn't clash
     volumes:
@@ -52,6 +54,32 @@ services:
     environment: *app-env
     ports:
       - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # Celery worker. Locally one process consumes every queue; in production run
+  # one worker pool per queue so slow AI or scheduled work never delays a reply.
+  worker:
+    build: .
+    image: rivon-worker
+    command: ["celery", "-A", "rivon.worker", "worker", "--loglevel=INFO",
+              "-Q", "rivon.inbound,rivon.ai,rivon.outbound,rivon.scheduled"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  # Moves committed outbox events onto the Celery queues.
+  relay:
+    build: .
+    image: rivon-worker
+    command: ["python", "-m", "rivon.events.relay"]
+    environment: *app-env
     depends_on:
       migrate:
         condition: service_completed_successfully

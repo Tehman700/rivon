@@ -38,6 +38,10 @@ def _to_test_database(url: str) -> str:
 _base = Settings()  # type: ignore[call-arg]
 os.environ["RIVON_DATABASE_URL"] = _to_test_database(_base.database_url)
 os.environ["RIVON_MIGRATION_DATABASE_URL"] = _to_test_database(_base.migration_database_url)
+assert _base.relay_database_url, "RIVON_RELAY_DATABASE_URL must be set for tests"
+os.environ["RIVON_RELAY_DATABASE_URL"] = _to_test_database(_base.relay_database_url)
+# Keep test queues away from a running dev worker on database 0.
+os.environ["RIVON_REDIS_URL"] = _base.redis_url.rsplit("/", 1)[0] + "/1"
 get_settings.cache_clear()
 
 
@@ -90,6 +94,20 @@ async def app_engine() -> AsyncIterator[AsyncEngine]:
     engine = create_engine(get_settings().database_url)
     yield engine
     await engine.dispose()
+
+
+@pytest.fixture(scope="session")
+async def relay_engine() -> AsyncIterator[AsyncEngine]:
+    url = get_settings().relay_database_url
+    assert url is not None
+    engine = create_engine(url)
+    yield engine
+    await engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def relay_sessionmaker(relay_engine: AsyncEngine) -> async_sessionmaker[AsyncSession]:
+    return async_sessionmaker(relay_engine, expire_on_commit=False)
 
 
 @pytest.fixture(scope="session")

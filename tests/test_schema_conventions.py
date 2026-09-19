@@ -30,12 +30,20 @@ NOT_TENANT_SCOPED = {
 # Every entry needs a reason a reviewer would accept.
 INDEX_EXCEPTIONS = {
     "uq_users_email": "login identity: owners sign in with email alone, before the tenant is known",
+    "ix_outbox_events_unpublished": "the relay's cross-tenant work queue (partial: unpublished only)",
 }
 
-# RLS policies other than tenant_isolation, and why. Each one widens access, so
-# each must be SELECT-only unless there's a very good reason.
+# RLS policies other than tenant_isolation: (command, roles) and why. Each one
+# widens access, so each is pinned exactly: a change here needs a review.
 EXTRA_POLICIES = {
-    ("users", "login_lookup"): "exposes the one user whose email is being logged in",
+    ("users", "login_lookup"): (
+        ("SELECT", {"public"}),
+        "exposes the one user whose email is being logged in",
+    ),
+    ("outbox_events", "relay_access"): (
+        ("ALL", {"rivon_relay"}),
+        "the relay role reads/marks events across tenants; its grants stop at this table",
+    ),
 }
 
 
@@ -126,11 +134,28 @@ async def test_every_table_forces_rls_with_tenant_policy(owner_engine: AsyncEngi
 async def test_only_reviewed_extra_policies_exist(owner_engine: AsyncEngine) -> None:
     rows = await _rows(
         owner_engine,
-        "SELECT tablename, policyname, cmd FROM pg_policies WHERE schemaname = 'public'",
+        "SELECT tablename, policyname, cmd, roles FROM pg_policies WHERE schemaname = 'public'",
     )
-    extra = {(r.tablename, r.policyname): r.cmd for r in rows if r.policyname != "tenant_isolation"}
-    assert set(extra) == set(EXTRA_POLICIES)
-    assert set(extra.values()) <= {"SELECT"}, f"extra policies must be SELECT-only: {extra}"
+    extra = {
+        (r.tablename, r.policyname): (r.cmd, set(r.roles))
+        for r in rows
+        if r.policyname != "tenant_isolation"
+    }
+    assert extra == {key: spec for key, (spec, _reason) in EXTRA_POLICIES.items()}
+
+
+async def test_relay_role_can_only_touch_the_outbox(owner_engine: AsyncEngine) -> None:
+    rows = await _rows(
+        owner_engine,
+        """
+        SELECT table_name, privilege_type FROM information_schema.role_table_grants
+        WHERE grantee = 'rivon_relay'
+        """,
+    )
+    assert {(r.table_name, r.privilege_type) for r in rows} == {
+        ("outbox_events", "SELECT"),
+        ("outbox_events", "UPDATE"),
+    }
 
 
 async def test_indexes_on_tenant_tables_lead_with_tenant_id(owner_engine: AsyncEngine) -> None:

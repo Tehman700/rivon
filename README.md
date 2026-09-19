@@ -56,12 +56,36 @@ chosen, emails are written to the API log (`docker compose logs api`).
 Access tokens are HS256 JWTs carrying the tenant ID; every tenant-scoped request
 runs under that tenant's RLS context.
 
+## Domain events and workers
+
+Modules talk through events in a transactional outbox (`rivon/events`):
+
+```python
+async with tenant_transaction(sessionmaker, tenant_id) as session:
+    ...                                    # the change
+    await publish(session, tenant_id, "lead.scored", {"lead_id": str(lead_id)})
+
+@subscribe("lead.scored", name="feasibility.on_lead_scored", queue=Queue.AI)
+async def on_lead_scored(session: AsyncSession, event: Event) -> None: ...
+```
+
+- The event is committed with the change, or not at all.
+- The `relay` service moves committed events onto Celery queues
+  (`rivon.inbound`, `rivon.ai`, `rivon.outbound`, `rivon.scheduled`).
+- The `worker` service runs subscribers. Each (event, subscriber) takes effect
+  exactly once: the handler runs in the same transaction that records the
+  delivery, so redeliveries are skipped and a failed handler leaves nothing behind.
+- Register subscriber modules in `rivon/subscribers.py`.
+- Locally one worker consumes every queue. In production, run one worker pool
+  per queue so slow AI or scheduled work never delays a customer's reply.
+
 ## Database roles
 
 | Role | Used by | Notes |
 |---|---|---|
 | `rivon_owner` | Alembic only | Owns the schema |
 | `rivon_app` | API and workers | Not superuser, not owner, no `BYPASSRLS` |
+| `rivon_relay` | Outbox relay | `SELECT`/`UPDATE` on `outbox_events` only, via a role-scoped policy |
 
 Both are created by `docker/postgres/init/01-roles.sh` the first time the data
 volume is created. After changing that script, recreate the volume:
