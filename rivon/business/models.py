@@ -3,11 +3,16 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
+import uuid
+
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     DateTime,
     Enum,
+    ForeignKey,
     Index,
+    Integer,
     Numeric,
     String,
     Text,
@@ -23,10 +28,40 @@ from rivon.db import Base, BaseMixin, TenantScopedMixin
 DEFAULT_ASSISTANT_NAME = "Rivon"
 
 
+def _string_enum(enum_cls: type[StrEnum], name: str) -> Enum:
+    return Enum(
+        enum_cls,
+        name=name,
+        native_enum=False,
+        create_constraint=True,
+        length=32,
+        values_callable=lambda members: [m.value for m in members],
+    )
+
+
 class ProjectSizeUnit(StrEnum):
     """Unit a vertical measures job size in. Each vertical adds its own (BIZ-08)."""
 
     KWP = "kWp"  # solar: peak kilowatts
+
+
+class RuleCategory(StrEnum):
+    """How a rate card line is grouped on a quotation."""
+
+    MATERIALS = "materials"
+    LABOUR = "labour"
+    TRANSPORT = "transport"
+    FEES = "fees"
+
+
+class QuantityBasis(StrEnum):
+    """What a rate card line's quantity is derived from. The solar values move
+    into the vertical config framework with BIZ-08."""
+
+    FIXED = "fixed"  # quantity is the factor itself, e.g. 1 inverter
+    SYSTEM_SIZE_KWP = "system_size_kwp"
+    BATTERY_CAPACITY_KWH = "battery_capacity_kwh"
+    DISTANCE_KM = "distance_km"  # one-way distance from the business to the site
 
 
 class Business(BaseMixin, TenantScopedMixin, Base):
@@ -106,6 +141,9 @@ class Service(BaseMixin, TenantScopedMixin, Base):
     name: Mapped[str] = mapped_column(String(120))
     description: Mapped[str | None] = mapped_column(Text)
     archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Overrides of the pricing settings for this service; NULL = use the default.
+    target_margin_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
+    vat_rate_percent: Mapped[Decimal | None] = mapped_column(Numeric(5, 2))
 
     @declared_attr.directive
     def __table_args__(cls) -> tuple[Any, ...]:
@@ -118,4 +156,89 @@ class Service(BaseMixin, TenantScopedMixin, Base):
                 unique=True,
                 postgresql_where=text("archived_at IS NULL"),
             ),
+            CheckConstraint(
+                "target_margin_percent IS NULL "
+                "OR (target_margin_percent >= 0 AND target_margin_percent <= 95)",
+                name="target_margin_range",
+            ),
+            CheckConstraint(
+                "vat_rate_percent IS NULL OR (vat_rate_percent >= 0 AND vat_rate_percent <= 100)",
+                name="vat_rate_range",
+            ),
+        )
+
+
+class PricingSettings(BaseMixin, TenantScopedMixin, Base):
+    """Business-wide pricing defaults. Exactly one per tenant.
+
+    Margin is gross margin on the selling price: price = cost / (1 - margin).
+    A 30% margin on a EUR 700 cost gives a EUR 1,000 price. Capped at 95%.
+    """
+
+    __tablename__ = "pricing_settings"
+
+    default_target_margin_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    # Quotes below this margin get flagged to the owner (QUOT-01).
+    minimum_margin_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+    default_vat_rate_percent: Mapped[Decimal] = mapped_column(Numeric(5, 2))
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            UniqueConstraint("tenant_id"),
+            CheckConstraint(
+                "default_target_margin_percent >= 0 AND default_target_margin_percent <= 95",
+                name="target_margin_range",
+            ),
+            CheckConstraint(
+                "minimum_margin_percent >= 0 "
+                "AND minimum_margin_percent <= default_target_margin_percent",
+                name="minimum_margin_range",
+            ),
+            CheckConstraint(
+                "default_vat_rate_percent >= 0 AND default_vat_rate_percent <= 100",
+                name="vat_rate_range",
+            ),
+        )
+
+
+class PricingRule(BaseMixin, TenantScopedMixin, Base):
+    """One line of a service's rate card. All amounts are costs, net of VAT.
+
+    chargeable quantity = max(minimum_quantity, basis x quantity_factor - included_quantity),
+    rounded up to a whole number if round_up. Line cost = chargeable quantity x unit_cost_eur.
+    For the fixed basis, "basis" is 1, so the quantity is the factor.
+    """
+
+    __tablename__ = "pricing_rules"
+
+    service_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("services.id", ondelete="RESTRICT"))
+    name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[RuleCategory] = mapped_column(_string_enum(RuleCategory, "category"))
+    quantity_basis: Mapped[QuantityBasis] = mapped_column(
+        _string_enum(QuantityBasis, "quantity_basis")
+    )
+    quantity_factor: Mapped[Decimal] = mapped_column(Numeric(10, 4), server_default="1")
+    unit_label: Mapped[str] = mapped_column(String(20))  # shown on the quote: "kWp", "h", "km"
+    unit_cost_eur: Mapped[Decimal] = mapped_column(Numeric(12, 2))
+    included_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), server_default="0")
+    minimum_quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), server_default="0")
+    round_up: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    sort_order: Mapped[int] = mapped_column(Integer, server_default="0")
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            Index("ix_pricing_rules_tenant_id_service_id", "tenant_id", "service_id"),
+            Index(
+                "uq_pricing_rules_tenant_id_service_id_name",
+                "tenant_id",
+                "service_id",
+                func.lower(text("name")),
+                unique=True,
+            ),
+            CheckConstraint("quantity_factor > 0", name="quantity_factor_positive"),
+            CheckConstraint("unit_cost_eur >= 0", name="unit_cost_not_negative"),
+            CheckConstraint("included_quantity >= 0", name="included_quantity_not_negative"),
+            CheckConstraint("minimum_quantity >= 0", name="minimum_quantity_not_negative"),
         )

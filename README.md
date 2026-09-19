@@ -71,6 +71,28 @@ Reads are open to every role in the tenant; changes are owner-only (until PLT-03
 
 Services are archived, never deleted: quotations will keep referring to them.
 
+### Pricing (BIZ-03)
+
+Owners enter **costs**; Rivon applies a **gross margin on price**:
+`price = cost ÷ (1 − margin)`, so a 30% margin on a €700 cost is €1,000.
+Margins are capped at 95%. All rate card amounts are EUR, net of VAT.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET/PUT /business/pricing-settings` | default target margin, minimum margin, default VAT rate |
+| `PATCH /business/services/{id}` | also takes `target_margin_percent` / `vat_rate_percent` overrides (`null` = use the default) |
+| `GET/POST /business/services/{id}/pricing-rules` | the service's rate card lines |
+| `PATCH/DELETE /business/services/{id}/pricing-rules/{rule_id}` | edit or remove a line |
+
+Each rate card line: `quantity = max(minimum_quantity, basis × quantity_factor − included_quantity)`,
+rounded up if `round_up`; `line cost = quantity × unit_cost_eur`. Bases: `fixed`,
+`system_size_kwp`, `battery_capacity_kwh`, `distance_km`. For example, labour at
+2.5 h per kWp with an 8 h minimum, or travel at 2 × km with the first 30 km free.
+
+A service's own margin can't be set below the business minimum, and the minimum
+can't be raised above any service's margin (409 names the services affected).
+The price calculator itself is QUOT-01.
+
 ## Domain events and workers
 
 Modules talk through events in a transactional outbox (`rivon/events`):

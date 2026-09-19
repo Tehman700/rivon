@@ -6,7 +6,12 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
 
-from rivon.business.models import DEFAULT_ASSISTANT_NAME, ProjectSizeUnit
+from rivon.business.models import (
+    DEFAULT_ASSISTANT_NAME,
+    ProjectSizeUnit,
+    QuantityBasis,
+    RuleCategory,
+)
 
 
 def _valid_timezone(value: str) -> str:
@@ -29,10 +34,30 @@ Website = Annotated[str, Field(max_length=300, pattern=r"^https?://\S+$")]
 ClockTime = Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")]  # "HH:MM", 24h
 Size = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
 Euros = Annotated[Decimal, Field(gt=0, max_digits=12, decimal_places=2)]
+# Gross margin on price, capped so price = cost / (1 - margin) stays sane.
+MarginPercent = Annotated[Decimal, Field(ge=0, le=95, max_digits=5, decimal_places=2)]
+VatPercent = Annotated[Decimal, Field(ge=0, le=100, max_digits=5, decimal_places=2)]
+Cost = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
+Factor = Annotated[Decimal, Field(gt=0, max_digits=10, decimal_places=4)]
+Quantity = Annotated[Decimal, Field(ge=0, max_digits=10, decimal_places=2)]
 
 
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class _Patch(_Strict):
+    """Partial update: only fields sent are changed. Fields listed in
+    `_nullable` may be sent as null to clear them; others may not."""
+
+    _nullable: frozenset[str] = frozenset()
+
+    @model_validator(mode="after")
+    def _no_null_for_required(self) -> Self:
+        for field in self.model_fields_set - self._nullable:
+            if getattr(self, field) is None:
+                raise ValueError(f"{field} can't be null")
+        return self
 
 
 class OpeningPeriod(_Strict):
@@ -123,22 +148,22 @@ ServiceDescription = Annotated[str, Field(max_length=2000)]
 class ServiceCreate(_Strict):
     name: ServiceName
     description: ServiceDescription | None = None
+    # Overrides of the business-wide pricing settings; None = use the default.
+    target_margin_percent: MarginPercent | None = None
+    vat_rate_percent: VatPercent | None = None
 
 
-class ServiceUpdate(_Strict):
-    """Only the fields sent are changed. `archived` hides or restores the service."""
+class ServiceUpdate(_Patch):
+    """Only the fields sent are changed. `archived` hides or restores the service.
+    Send a margin or VAT override as null to go back to the default."""
+
+    _nullable = frozenset({"description", "target_margin_percent", "vat_rate_percent"})
 
     name: ServiceName | None = None
     description: ServiceDescription | None = None
     archived: bool | None = None
-
-    @model_validator(mode="after")
-    def _name_not_null(self) -> Self:
-        if "name" in self.model_fields_set and self.name is None:
-            raise ValueError("name can't be empty")
-        if "archived" in self.model_fields_set and self.archived is None:
-            raise ValueError("archived must be true or false")
-        return self
+    target_margin_percent: MarginPercent | None = None
+    vat_rate_percent: VatPercent | None = None
 
 
 class ServiceOut(BaseModel):
@@ -149,5 +174,71 @@ class ServiceOut(BaseModel):
     description: str | None
     archived: bool
     archived_at: datetime | None
+    target_margin_percent: Decimal | None
+    vat_rate_percent: Decimal | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class PricingSettingsIn(_Strict):
+    default_target_margin_percent: MarginPercent
+    minimum_margin_percent: MarginPercent
+    default_vat_rate_percent: VatPercent
+
+    @model_validator(mode="after")
+    def _minimum_below_target(self) -> Self:
+        if self.minimum_margin_percent > self.default_target_margin_percent:
+            raise ValueError("minimum margin can't be above the target margin")
+        return self
+
+
+class PricingSettingsOut(PricingSettingsIn):
+    model_config = ConfigDict(from_attributes=True)
+
+    updated_at: datetime
+
+
+RuleName = Annotated[str, Field(min_length=1, max_length=120)]
+UnitLabel = Annotated[str, Field(min_length=1, max_length=20)]
+SortOrder = Annotated[int, Field(ge=0, le=10_000)]
+
+
+class PricingRuleIn(_Strict):
+    """One rate card line. Amounts are costs in EUR, net of VAT.
+
+    chargeable quantity = max(minimum_quantity, basis x quantity_factor - included_quantity),
+    rounded up to a whole number if round_up; cost = chargeable quantity x unit_cost_eur.
+    """
+
+    name: RuleName
+    category: RuleCategory
+    quantity_basis: QuantityBasis
+    quantity_factor: Factor = Decimal(1)
+    unit_label: UnitLabel
+    unit_cost_eur: Cost
+    included_quantity: Quantity = Decimal(0)
+    minimum_quantity: Quantity = Decimal(0)
+    round_up: bool = False
+    sort_order: SortOrder = 0
+
+
+class PricingRuleUpdate(_Patch):
+    name: RuleName | None = None
+    category: RuleCategory | None = None
+    quantity_basis: QuantityBasis | None = None
+    quantity_factor: Factor | None = None
+    unit_label: UnitLabel | None = None
+    unit_cost_eur: Cost | None = None
+    included_quantity: Quantity | None = None
+    minimum_quantity: Quantity | None = None
+    round_up: bool | None = None
+    sort_order: SortOrder | None = None
+
+
+class PricingRuleOut(PricingRuleIn):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+    id: uuid.UUID
+    service_id: uuid.UUID
     created_at: datetime
     updated_at: datetime

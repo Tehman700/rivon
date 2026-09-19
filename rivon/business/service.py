@@ -6,18 +6,41 @@ Every query filters by tenant_id as well as running under tenant RLS.
 
 import uuid
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rivon.business.models import Business, Service
-from rivon.business.schemas import BusinessProfileIn, ServiceCreate, ServiceUpdate
+from rivon.business.models import Business, PricingRule, PricingSettings, Service
+from rivon.business.schemas import (
+    BusinessProfileIn,
+    PricingRuleIn,
+    PricingRuleUpdate,
+    PricingSettingsIn,
+    ServiceCreate,
+    ServiceUpdate,
+)
 
 
 class DuplicateServiceName(Exception):
     pass
+
+
+class DuplicateRuleName(Exception):
+    pass
+
+
+class MarginBelowMinimum(Exception):
+    """A target margin would sit below the business's minimum margin."""
+
+    def __init__(self, minimum: Decimal, services: list[str]) -> None:
+        self.minimum = minimum
+        self.services = services
+        super().__init__(
+            f"target margin below the {minimum}% minimum margin (services: {', '.join(services)})"
+        )
 
 
 async def get_profile(session: AsyncSession, tenant_id: uuid.UUID) -> Business | None:
@@ -60,35 +83,138 @@ async def get_service(
     )
 
 
-async def _flush_checking_name(session: AsyncSession) -> None:
+_UNIQUE_NAME_ERRORS: dict[str, type[Exception]] = {
+    "uq_services_tenant_id_name_active": DuplicateServiceName,
+    "uq_pricing_rules_tenant_id_service_id_name": DuplicateRuleName,
+}
+
+
+async def _flush_checking_names(session: AsyncSession) -> None:
     try:
         async with session.begin_nested():
             await session.flush()
     except IntegrityError as exc:
-        if "uq_services_tenant_id_name_active" in str(exc.orig):
-            raise DuplicateServiceName() from exc
+        for constraint, error in _UNIQUE_NAME_ERRORS.items():
+            if constraint in str(exc.orig):
+                raise error() from exc
         raise
 
 
+async def _check_margin_override(
+    session: AsyncSession, tenant_id: uuid.UUID, margin: Decimal | None, service_name: str
+) -> None:
+    if margin is None:
+        return
+    settings = await get_pricing_settings(session, tenant_id)
+    if settings is not None and margin < settings.minimum_margin_percent:
+        raise MarginBelowMinimum(settings.minimum_margin_percent, [service_name])
+
+
 async def create_service(session: AsyncSession, tenant_id: uuid.UUID, data: ServiceCreate) -> Service:
-    service = Service(id=uuid.uuid4(), tenant_id=tenant_id, name=data.name, description=data.description)
+    await _check_margin_override(session, tenant_id, data.target_margin_percent, data.name)
+    service = Service(id=uuid.uuid4(), tenant_id=tenant_id, **data.model_dump())
     session.add(service)
-    await _flush_checking_name(session)
+    await _flush_checking_names(session)
     await session.refresh(service)
     return service
 
 
 async def update_service(session: AsyncSession, service: Service, changes: ServiceUpdate) -> Service:
     fields = changes.model_fields_set
-    if "name" in fields and changes.name is not None:
-        service.name = changes.name
-    if "description" in fields:
-        service.description = changes.description
+    for field in fields & {"name", "description", "target_margin_percent", "vat_rate_percent"}:
+        setattr(service, field, getattr(changes, field))
     if "archived" in fields:
         if changes.archived and service.archived_at is None:
             service.archived_at = datetime.now(UTC)
         elif not changes.archived:
             service.archived_at = None
-    await _flush_checking_name(session)
+    await _check_margin_override(session, service.tenant_id, service.target_margin_percent, service.name)
+    await _flush_checking_names(session)
     await session.refresh(service)
     return service
+
+
+# --- Pricing (BIZ-03) ---------------------------------------------------------
+
+
+async def get_pricing_settings(session: AsyncSession, tenant_id: uuid.UUID) -> PricingSettings | None:
+    return await session.scalar(select(PricingSettings).where(PricingSettings.tenant_id == tenant_id))
+
+
+async def put_pricing_settings(
+    session: AsyncSession, tenant_id: uuid.UUID, data: PricingSettingsIn
+) -> PricingSettings:
+    """Create or replace the pricing settings. Refuses a minimum margin that
+    would leave any service's own target margin below it."""
+    below = (
+        await session.scalars(
+            select(Service.name)
+            .where(
+                Service.tenant_id == tenant_id,
+                Service.target_margin_percent < data.minimum_margin_percent,
+            )
+            .order_by(func.lower(Service.name))
+        )
+    ).all()
+    if below:
+        raise MarginBelowMinimum(data.minimum_margin_percent, list(below))
+
+    values = data.model_dump()
+    await session.execute(
+        insert(PricingSettings)
+        .values(id=uuid.uuid4(), tenant_id=tenant_id, **values)
+        .on_conflict_do_update(
+            index_elements=[PricingSettings.tenant_id], set_={**values, "updated_at": func.now()}
+        )
+    )
+    settings = await get_pricing_settings(session, tenant_id)
+    assert settings is not None
+    await session.refresh(settings)
+    return settings
+
+
+async def list_pricing_rules(session: AsyncSession, service: Service) -> list[PricingRule]:
+    rows = await session.scalars(
+        select(PricingRule)
+        .where(PricingRule.tenant_id == service.tenant_id, PricingRule.service_id == service.id)
+        .order_by(PricingRule.sort_order, func.lower(PricingRule.name))
+    )
+    return list(rows.all())
+
+
+async def get_pricing_rule(
+    session: AsyncSession, service: Service, rule_id: uuid.UUID
+) -> PricingRule | None:
+    return await session.scalar(
+        select(PricingRule).where(
+            PricingRule.tenant_id == service.tenant_id,
+            PricingRule.service_id == service.id,
+            PricingRule.id == rule_id,
+        )
+    )
+
+
+async def create_pricing_rule(session: AsyncSession, service: Service, data: PricingRuleIn) -> PricingRule:
+    rule = PricingRule(
+        id=uuid.uuid4(), tenant_id=service.tenant_id, service_id=service.id, **data.model_dump()
+    )
+    session.add(rule)
+    await _flush_checking_names(session)
+    await session.refresh(rule)
+    return rule
+
+
+async def update_pricing_rule(
+    session: AsyncSession, rule: PricingRule, changes: PricingRuleUpdate
+) -> PricingRule:
+    for field in changes.model_fields_set:
+        setattr(rule, field, getattr(changes, field))
+    await _flush_checking_names(session)
+    await session.refresh(rule)
+    return rule
+
+
+async def delete_pricing_rule(session: AsyncSession, rule: PricingRule) -> None:
+    """Hard delete: quotations keep their own copy of the lines they priced."""
+    await session.delete(rule)
+    await session.flush()
