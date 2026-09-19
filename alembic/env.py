@@ -5,16 +5,16 @@ from alembic import context
 from sqlalchemy.engine import Connection
 from sqlalchemy.pool import NullPool
 
-import rivon.platform.models  # noqa: F401  (registers tables on Base.metadata)
 from rivon.config import get_settings
-from rivon.db import Base, create_engine
+from rivon.db import create_engine
+from rivon.models import metadata
 
 config = context.config
 
 if config.config_file_name is not None and config.attributes.get("configure_logger", True):
     fileConfig(config.config_file_name)
 
-target_metadata = Base.metadata
+target_metadata = metadata
 
 
 def _database_url() -> str:

@@ -51,9 +51,26 @@ tenant set, queries return zero rows.
 ## Migrations
 
 ```sh
-uv run alembic revision -m "describe the change"   # write it by hand
+uv run alembic revision --rev-id 0002 -m "describe the change"   # then write it by hand
 uv run alembic upgrade head
-uv run alembic check                                # models and migrations agree
+uv run alembic check                                              # models and migrations agree
 ```
 
-Never edit a migration that has run anywhere. Migrations don't import app code.
+Conventions (OPS-09). Everything marked ✓ is enforced by
+`tests/test_schema_conventions.py`, so breaking it fails CI:
+
+- ✓ Revision IDs are sequential four-digit numbers (`0001`, `0002`, …), the file
+  name starts with the ID, and there is a single head.
+- ✓ Migrations never import `rivon` code. A migration must mean forever what it
+  meant when it ran, so helpers and SQL are written inline.
+- ✓ Models and migrations agree (`alembic check`).
+- ✓ Every table has `id` (UUID), `created_at`, `updated_at` (timestamptz, not null).
+- ✓ Every table except `tenants` has `tenant_id` (UUID, not null, FK to `tenants`).
+- ✓ Every table has `ENABLE` + `FORCE ROW LEVEL SECURITY` and a `tenant_isolation` policy.
+- ✓ Every index on a tenant-scoped table leads with `tenant_id`. Exceptions go in
+  `INDEX_EXCEPTIONS` in that test, each with a reason.
+- ✓ Every migration has a working `downgrade()`. The test run goes up, down, up.
+- Constraint names follow the naming convention in `rivon/db.py`; use `op.f(...)`.
+- New modules add their models to `rivon/models.py`.
+- Never edit a migration that has run anywhere, including on a teammate's machine.
+  Write a new one.

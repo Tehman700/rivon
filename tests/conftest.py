@@ -5,6 +5,7 @@ Tests themselves connect as the application role, so RLS is in force exactly
 as it is in production.
 """
 
+import asyncio
 import os
 import uuid
 from collections.abc import AsyncIterator
@@ -38,12 +39,39 @@ os.environ["RIVON_MIGRATION_DATABASE_URL"] = _to_test_database(_base.migration_d
 get_settings.cache_clear()
 
 
+# Drops everything the migrations create, whatever revision the test database
+# is at (including a revision whose file no longer exists).
+RESET_SCHEMA_SQL = """
+DO $$
+DECLARE r record;
+BEGIN
+  FOR r IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' LOOP
+    EXECUTE format('DROP TABLE IF EXISTS %I CASCADE', r.tablename);
+  END LOOP;
+  FOR r IN SELECT p.oid::regprocedure AS signature FROM pg_proc p
+           JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' LOOP
+    EXECUTE 'DROP FUNCTION IF EXISTS ' || r.signature || ' CASCADE';
+  END LOOP;
+END $$;
+"""
+
+
+async def _reset_schema(url: str) -> None:
+    engine = create_engine(url, poolclass=NullPool)
+    async with engine.begin() as conn:
+        await conn.execute(text(RESET_SCHEMA_SQL))
+    await engine.dispose()
+
+
 @pytest.fixture(scope="session", autouse=True)
 def migrated_database() -> None:
+    url = get_settings().migration_database_url
+    asyncio.run(_reset_schema(url))
     config = Config(str(REPO_ROOT / "alembic.ini"))
-    config.attributes["database_url"] = get_settings().migration_database_url
+    config.attributes["database_url"] = url
     config.attributes["configure_logger"] = False
-    # Down then up: a clean schema every run, and the downgrade path gets exercised.
+    # Up, down, up: every migration's downgrade is exercised on each run.
+    command.upgrade(config, "head")
     command.downgrade(config, "base")
     command.upgrade(config, "head")
 
