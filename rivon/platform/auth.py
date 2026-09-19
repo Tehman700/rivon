@@ -48,9 +48,18 @@ class InvalidCredentials(AuthError):
         super().__init__("Invalid email or password")
 
 
-class TenantNotActive(AuthError):
+class TenantUnavailable(AuthError):
+    """The credentials are fine but this deployment won't serve the tenant."""
+
+
+class TenantNotActive(TenantUnavailable):
     def __init__(self) -> None:
         super().__init__("This account is not active")
+
+
+class TenantInOtherRegion(TenantUnavailable):
+    def __init__(self) -> None:
+        super().__init__("This account is hosted in another region")
 
 
 class InvalidToken(AuthError):
@@ -107,10 +116,14 @@ async def _issue_tokens(
     )
 
 
-async def _require_active_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> Tenant:
+async def _require_serviceable_tenant(
+    session: AsyncSession, settings: Settings, tenant_id: uuid.UUID
+) -> Tenant:
     tenant = await session.scalar(select(Tenant).where(Tenant.id == tenant_id))
     if tenant is None or tenant.status != TenantStatus.ACTIVE:
         raise TenantNotActive()
+    if tenant.region != settings.deployment_region:
+        raise TenantInOtherRegion()
     return tenant
 
 
@@ -128,7 +141,7 @@ async def login(
             raise InvalidCredentials()
 
         await set_current_tenant(session, user.tenant_id)
-        await _require_active_tenant(session, user.tenant_id)
+        await _require_serviceable_tenant(session, settings, user.tenant_id)
         if new_hash is not None:
             user.password_hash = new_hash
         return await _issue_tokens(session, user, settings, family_id=uuid.uuid4())
@@ -151,7 +164,7 @@ async def refresh(
             user = await session.scalar(select(User).where(User.id == row.user_id))
             if user is None:
                 raise InvalidToken()
-            await _require_active_tenant(session, user.tenant_id)
+            await _require_serviceable_tenant(session, settings, user.tenant_id)
             row.revoked_at = _now()
             return await _issue_tokens(session, user, settings, family_id=row.family_id)
 
@@ -253,6 +266,7 @@ class ProvisionedTenant:
 
 async def provision_tenant(
     sessionmaker: async_sessionmaker[AsyncSession],
+    settings: Settings,
     *,
     name: str,
     slug: str,
@@ -261,6 +275,11 @@ async def provision_tenant(
 ) -> ProvisionedTenant:
     """Team-only (invite-only provisioning): create an active tenant and its
     owner. The owner has no password until they use a reset link."""
+    if region != settings.deployment_region:
+        raise ProvisioningError(
+            f"This deployment serves region '{settings.deployment_region}'; "
+            f"a '{region}' tenant must be provisioned in that region's deployment"
+        )
     tenant_id = uuid.uuid4()
     owner = User(
         id=uuid.uuid4(),

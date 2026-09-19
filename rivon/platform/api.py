@@ -75,7 +75,7 @@ def _tokens(pair: auth.TokenPair) -> TokenResponse:
 def _http_error(exc: auth.AuthError) -> HTTPException:
     code = (
         status.HTTP_403_FORBIDDEN
-        if isinstance(exc, auth.TenantNotActive)
+        if isinstance(exc, auth.TenantUnavailable)
         else status.HTTP_401_UNAUTHORIZED
     )
     return HTTPException(code, str(exc))

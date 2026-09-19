@@ -52,7 +52,7 @@ async def _provision_owner(
     suffix = uuid.uuid4().hex[:10]
     email = f"owner-{suffix}@example.com"
     tenant = await auth.provision_tenant(
-        sessionmaker, name="Solar Co", slug=f"solar-{suffix}", region=Region.EU, owner_email=email
+        sessionmaker, get_settings(), name="Solar Co", slug=f"solar-{suffix}", region=Region.EU, owner_email=email
     )
     await auth.request_password_reset(sessionmaker, get_settings(), email_sender, email)
     await auth.confirm_password_reset(sessionmaker, _reset_token(email_sender), PASSWORD)
@@ -118,7 +118,7 @@ async def test_provisioned_owner_cannot_log_in_before_setting_password(
 ) -> None:
     email = f"new-{uuid.uuid4().hex[:8]}@example.com"
     await auth.provision_tenant(
-        app_sessionmaker, name="New", slug=f"new-{uuid.uuid4().hex[:8]}", region=Region.EU,
+        app_sessionmaker, get_settings(), name="New", slug=f"new-{uuid.uuid4().hex[:8]}", region=Region.EU,
         owner_email=email,
     )
     for guess in ["!", "", "password1234"]:
@@ -332,7 +332,7 @@ async def test_provisioning_rejects_duplicate_slug_and_email(
 ) -> None:
     with pytest.raises(auth.ProvisioningError):
         await auth.provision_tenant(
-            app_sessionmaker, name="Dup", slug=f"x-{uuid.uuid4().hex[:8]}", region=Region.EU,
+            app_sessionmaker, get_settings(), name="Dup", slug=f"x-{uuid.uuid4().hex[:8]}", region=Region.EU,
             owner_email=owner.email.upper(),
         )
 

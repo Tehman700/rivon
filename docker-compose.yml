@@ -2,6 +2,7 @@ name: rivon
 
 x-app-env: &app-env
   RIVON_ENV: ${RIVON_ENV:-local}
+  RIVON_DEPLOYMENT_REGION: ${RIVON_DEPLOYMENT_REGION:-eu}
   RIVON_DATABASE_URL: postgresql+asyncpg://rivon_app:${RIVON_DB_APP_PASSWORD:?}@postgres:5432/rivon
   RIVON_MIGRATION_DATABASE_URL: postgresql+asyncpg://rivon_owner:${RIVON_DB_OWNER_PASSWORD:?}@postgres:5432/rivon
   RIVON_REDIS_URL: redis://redis:6379/0

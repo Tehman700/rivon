@@ -79,7 +79,9 @@ async def get_current_tenant_id(
 
 
 async def get_tenant_context(
-    request: Request, tenant_id: Annotated[uuid.UUID, Depends(get_current_tenant_id)]
+    request: Request,
+    tenant_id: Annotated[uuid.UUID, Depends(get_current_tenant_id)],
+    settings: Annotated[Settings, Depends(get_settings)],
 ) -> AsyncIterator[TenantContext]:
     """FastAPI dependency: a tenant-scoped transaction for the request."""
     sessionmaker: async_sessionmaker[AsyncSession] = request.app.state.sessionmaker
@@ -88,4 +90,6 @@ async def get_tenant_context(
         tenant = await session.scalar(select(Tenant).where(Tenant.id == tenant_id))
         if tenant is None or tenant.status != TenantStatus.ACTIVE:
             raise HTTPException(status.HTTP_403_FORBIDDEN, "Tenant is not active")
+        if tenant.region != settings.deployment_region:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Tenant is hosted in another region")
         yield TenantContext(tenant_id=tenant.id, region=tenant.region, session=session)

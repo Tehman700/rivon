@@ -3,11 +3,17 @@ from functools import lru_cache
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from rivon.platform.models import Region
+
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="RIVON_", env_file=".env", extra="ignore")
 
     env: str = "local"
+
+    # Which region this deployment serves. Each region is a separate deployment
+    # with its own database; a tenant is only ever served by its own region's.
+    deployment_region: Region = Region.EU
 
     # Application role: not a superuser, not the table owner, so RLS applies.
     # The API and workers connect with this.

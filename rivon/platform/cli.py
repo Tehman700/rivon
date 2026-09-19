@@ -28,6 +28,7 @@ async def _provision(args: argparse.Namespace) -> int:
     try:
         tenant = await auth.provision_tenant(
             sessionmaker,
+            settings,
             name=args.name,
             slug=args.slug,
             region=Region(args.region),
