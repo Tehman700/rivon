@@ -1,0 +1,96 @@
+# Production stack for the single EU server (spec §7: Compose on one instance).
+# Postgres is managed (Neon, Frankfurt); everything else runs here.
+#
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Secrets come from .env.production on the server (never committed).
+
+name: rivon
+
+x-app-env: &app-env
+  RIVON_ENV: production
+  RIVON_DEPLOYMENT_REGION: eu
+  RIVON_DATABASE_URL: ${RIVON_DATABASE_URL:?}
+  RIVON_MIGRATION_DATABASE_URL: ${RIVON_MIGRATION_DATABASE_URL:?}
+  RIVON_RELAY_DATABASE_URL: ${RIVON_RELAY_DATABASE_URL:?}
+  RIVON_REDIS_URL: redis://redis:6379/0
+  RIVON_JWT_SECRET: ${RIVON_JWT_SECRET:?}
+  RIVON_PUBLIC_APP_URL: ${RIVON_PUBLIC_APP_URL:?}
+
+services:
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    build: .
+    image: rivon-api
+    command: ["alembic", "upgrade", "head"]
+    environment: *app-env
+
+  api:
+    build: .
+    image: rivon-api
+    restart: unless-stopped
+    environment: *app-env
+    expose:
+      - "8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: .
+    image: rivon-worker
+    restart: unless-stopped
+    command: ["celery", "-A", "rivon.worker", "worker", "--loglevel=INFO",
+              "-Q", "rivon.inbound,rivon.ai,rivon.outbound,rivon.scheduled", "-c", "2"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+
+  relay:
+    build: .
+    image: rivon-worker
+    restart: unless-stopped
+    command: ["python", "-m", "rivon.events.relay"]
+    environment: *app-env
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Terminates TLS and gets certificates automatically from Let's Encrypt.
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      RIVON_API_DOMAIN: ${RIVON_API_DOMAIN:?}
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - api
+
+volumes:
+  caddy_data:
+  caddy_config:

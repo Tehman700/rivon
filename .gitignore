@@ -1,4 +1,6 @@
 .env
+.env.*
+!.env.example
 .venv/
 __pycache__/
 *.py[cod]
@@ -10,3 +12,5 @@ htmlcov/
 
 # Local design reference (not for the public repo)
 design-files/
+*.pem
+scripts/.prod_*

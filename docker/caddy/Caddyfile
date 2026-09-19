@@ -1,0 +1,14 @@
+# TLS for the API. Caddy gets and renews the certificate automatically.
+{$RIVON_API_DOMAIN} {
+	encode zstd gzip
+
+	# Sent by the browser to the dashboard, not here, but harmless and cheap.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	reverse_proxy api:8000
+}
