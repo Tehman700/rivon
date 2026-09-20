@@ -6,6 +6,7 @@ import { SiteFooter } from "@/components/marketing/site-footer"
 import { SiteHeader } from "@/components/marketing/site-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { CONTACT_EMAIL } from "@/lib/contact"
 
 export const metadata: Metadata = {
   title: "Request access",
@@ -20,7 +21,7 @@ Roughly how many enquiries a week:
 Your name and phone:`
 
 export default function RequestAccessPage() {
-  const mailto = `mailto:hello@tideover.site?subject=${encodeURIComponent(SUBJECT)}&body=${encodeURIComponent(BODY)}`
+  const mailto = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent(SUBJECT)}&body=${encodeURIComponent(BODY)}`
 
   return (
     <>
@@ -53,7 +54,7 @@ export default function RequestAccessPage() {
             </ul>
             <Button asChild size="lg">
               <a href={mailto}>
-                <Mail /> Email hello@tideover.site
+                <Mail /> Email {CONTACT_EMAIL}
               </a>
             </Button>
           </CardContent>

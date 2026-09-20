@@ -1,6 +1,7 @@
 import Link from "next/link"
 
 import { RivonLogo } from "@/components/brand/logo"
+import { CONTACT_EMAIL } from "@/lib/contact"
 
 export function SiteFooter() {
   return (
@@ -25,8 +26,8 @@ export function SiteFooter() {
         </div>
         <div className="space-y-2 text-sm">
           <p className="font-medium">Contact</p>
-          <a href="mailto:hello@tideover.site" className="block text-muted-foreground hover:text-foreground">
-            hello@tideover.site
+          <a href={`mailto:${CONTACT_EMAIL}`} className="block break-all text-muted-foreground hover:text-foreground">
+            {CONTACT_EMAIL}
           </a>
           <p className="text-muted-foreground">Privacy notice and terms are in preparation.</p>
         </div>
