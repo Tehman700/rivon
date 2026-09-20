@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import { apiGet, getMe, getProfile } from "@/lib/api/server"
-import type { PricingRule, PricingSettings, Service } from "@/lib/api/types"
+import type { Crew, InventoryItem, PricingRule, PricingSettings, Service, ServiceArea } from "@/lib/api/types"
 
 export const metadata: Metadata = { title: "Overview" }
 
@@ -20,11 +20,14 @@ interface Step {
 }
 
 export default async function DashboardPage() {
-  const [me, profile, services, pricing] = await Promise.all([
+  const [me, profile, services, pricing, areas, inventory, crews] = await Promise.all([
     getMe(),
     getProfile(),
     apiGet<Service[]>("/business/services"),
     apiGet<PricingSettings>("/business/pricing-settings"),
+    apiGet<ServiceArea[]>("/business/service-areas"),
+    apiGet<InventoryItem[]>("/business/inventory"),
+    apiGet<Crew[]>("/business/crews"),
   ])
   const active = services ?? []
   const rateCards = await Promise.all(
@@ -65,6 +68,25 @@ export default async function DashboardPage() {
         : undefined,
     },
   ]
+
+  // What feasibility needs before it can judge a job (BIZ-05/06/07).
+  const capacity = [
+    { label: "service area", href: "/service-areas", count: (areas ?? []).length },
+    { label: "stock item", href: "/inventory", count: (inventory ?? []).length },
+    { label: "crew", href: "/crews", count: (crews ?? []).filter((c) => c.active).length },
+  ]
+  const missing = capacity.filter((c) => c.count === 0)
+  steps.push({
+    title: "Say what you can take on",
+    description:
+      "Your service areas, the stock you hold and the crews you can send. Rivon checks every job against these.",
+    href: missing[0]?.href ?? "/service-areas",
+    done: missing.length === 0,
+    detail: missing.length
+      ? `no ${missing.map((m) => `${m.label}s`).join(", ")} yet`
+      : capacity.map((c) => `${c.count} ${c.label}${c.count === 1 ? "" : "s"}`).join(" · "),
+  })
+
   const completed = steps.filter((s) => s.done).length
   const firstName = profile?.name ?? "your business"
 

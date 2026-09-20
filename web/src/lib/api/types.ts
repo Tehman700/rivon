@@ -107,3 +107,34 @@ export const BASIS_LABELS: Record<QuantityBasis, string> = {
   battery_capacity_kwh: "Battery capacity (kWh)",
   distance_km: "Distance (km, one way)",
 }
+
+export interface ServiceArea {
+  id: string
+  name: string
+  country: string
+  postal_prefixes: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface InventoryItem {
+  id: string
+  name: string
+  sku: string | null
+  unit_label: string
+  quantity: string
+  low_stock_threshold: string | null
+  low_stock: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Crew {
+  id: string
+  name: string
+  headcount: number
+  weekly_capacity_hours: string
+  active: boolean
+  created_at: string
+  updated_at: string
+}

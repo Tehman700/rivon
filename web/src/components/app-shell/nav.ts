@@ -1,7 +1,10 @@
 import {
+  Boxes,
   Building2,
   FileText,
+  HardHat,
   LayoutDashboard,
+  MapPin,
   MessagesSquare,
   Percent,
   Users,
@@ -32,6 +35,9 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
     items: [
       { href: "/services", label: "Services & rate cards", icon: Wrench },
       { href: "/settings/pricing", label: "Pricing", icon: Percent },
+      { href: "/service-areas", label: "Service areas", icon: MapPin },
+      { href: "/inventory", label: "Inventory", icon: Boxes },
+      { href: "/crews", label: "Crews", icon: HardHat },
       { href: "/settings/business", label: "Business profile", icon: Building2 },
     ],
   },
