@@ -12,7 +12,7 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   title: { default: "Rivon", template: "%s · Rivon" },
   description: "Qualify leads, check feasibility and quote, for service businesses.",
-  robots: { index: false, follow: false },
+  metadataBase: new URL("https://app.tideover.site"),
 }
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

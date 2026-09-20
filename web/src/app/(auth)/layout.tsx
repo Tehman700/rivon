@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { RivonLogo } from "@/components/brand/logo"
@@ -54,3 +55,6 @@ function FlowLines() {
     </svg>
   )
 }
+
+// Private area: keep it out of search results.
+export const metadata: Metadata = { robots: { index: false, follow: false } }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 
 import { MobileNav } from "@/components/app-shell/mobile-nav"
@@ -41,3 +42,6 @@ export default async function AppLayout({ children }: LayoutProps<"/">) {
     </div>
   )
 }
+
+// Private area: keep it out of search results.
+export const metadata: Metadata = { robots: { index: false, follow: false } }

@@ -9,7 +9,7 @@ import {
 } from "@/lib/session"
 
 // Pages reachable without a session.
-const PUBLIC_PAGES = new Set(["/login", "/forgot-password", "/reset-password"])
+const PUBLIC_PAGES = new Set(["/", "/login", "/forgot-password", "/reset-password", "/request-access"])
 
 /**
  * Gatekeeper for every page and /api/backend call:
