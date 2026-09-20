@@ -7,6 +7,7 @@ import {
   MapPin,
   MessagesSquare,
   Percent,
+  Sparkles,
   Users,
   Wrench,
   type LucideIcon,
@@ -33,6 +34,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Setup",
     items: [
+      { href: "/assistant", label: "Assistant & sizing", icon: Sparkles },
       { href: "/services", label: "Services & rate cards", icon: Wrench },
       { href: "/settings/pricing", label: "Pricing", icon: Percent },
       { href: "/service-areas", label: "Service areas", icon: MapPin },

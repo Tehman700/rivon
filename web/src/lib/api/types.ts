@@ -138,3 +138,34 @@ export interface Crew {
   created_at: string
   updated_at: string
 }
+
+export interface VerticalField {
+  name: string
+  kind: "text" | "number" | "boolean" | "choice" | "multi_choice"
+  label: string
+  question: string
+  unit: string | null
+  choices: string[]
+  required: boolean
+}
+
+export interface VerticalConfig {
+  key: string
+  label: string
+  groups: { key: string; label: string; fields: VerticalField[] }[]
+  required_any_of: string[][]
+  settings: {
+    vertical: string
+    annual_kwh_per_kwp: string
+    roof_area_m2_per_kwp: string
+    max_followups: number
+    updated_at: string
+  }
+}
+
+export interface SizeEstimate {
+  system_size_kwp: string | null
+  basis: "stated" | "annual_consumption" | "roof_limited" | "unknown"
+  explanation: string
+  missing_for_quote: string[]
+}
