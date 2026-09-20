@@ -4,7 +4,15 @@ from decimal import Decimal
 from typing import Annotated, Self
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    computed_field,
+    model_validator,
+)
 
 from rivon.business.models import (
     DEFAULT_ASSISTANT_NAME,
@@ -240,5 +248,125 @@ class PricingRuleOut(PricingRuleIn):
 
     id: uuid.UUID
     service_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+
+# --- Capacity: where you work, what you hold, who can go (BIZ-05/06/07) -------
+
+PostalPrefix = Annotated[str, Field(pattern=r"^[A-Za-z0-9]{1,10}$")]
+PlaceName = Annotated[str, Field(min_length=1, max_length=120)]
+Quantity12 = Annotated[Decimal, Field(ge=0, max_digits=12, decimal_places=2)]
+CapacityHours = Annotated[Decimal, Field(gt=0, max_digits=6, decimal_places=2)]
+Headcount = Annotated[int, Field(ge=1, le=500)]
+
+
+def _tidy_prefixes(values: list[str]) -> list[str]:
+    """Upper-case and de-duplicate, keeping the order the owner typed."""
+    seen: dict[str, None] = {}
+    for value in values:
+        seen.setdefault(value.strip().upper(), None)
+    return list(seen)
+
+
+class ServiceAreaIn(_Strict):
+    """Somewhere you'll travel to. Postal prefixes make address matching exact:
+    "101" covers every Berlin postcode starting 101."""
+
+    name: PlaceName
+    country: Country
+    postal_prefixes: Annotated[list[PostalPrefix], Field(max_length=50)] = []
+
+    @model_validator(mode="after")
+    def _normalise(self) -> Self:
+        self.postal_prefixes = _tidy_prefixes(self.postal_prefixes)
+        return self
+
+
+class ServiceAreaUpdate(_Patch):
+    name: PlaceName | None = None
+    country: Country | None = None
+    postal_prefixes: Annotated[list[PostalPrefix], Field(max_length=50)] | None = None
+
+    @model_validator(mode="after")
+    def _normalise(self) -> Self:
+        if self.postal_prefixes is not None:
+            self.postal_prefixes = _tidy_prefixes(self.postal_prefixes)
+        return self
+
+
+class ServiceAreaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    country: str
+    postal_prefixes: list[str]
+    created_at: datetime
+    updated_at: datetime
+
+
+class InventoryItemIn(_Strict):
+    name: PlaceName
+    sku: Annotated[str, Field(max_length=60)] | None = None
+    unit_label: UnitLabel
+    quantity: Quantity12 = Decimal(0)
+    low_stock_threshold: Quantity12 | None = None
+
+
+class InventoryItemUpdate(_Patch):
+    _nullable = frozenset({"sku", "low_stock_threshold"})
+
+    name: PlaceName | None = None
+    sku: Annotated[str, Field(max_length=60)] | None = None
+    unit_label: UnitLabel | None = None
+    quantity: Quantity12 | None = None
+    low_stock_threshold: Quantity12 | None = None
+
+
+class InventoryItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    sku: str | None
+    unit_label: str
+    quantity: Decimal
+    low_stock_threshold: Decimal | None
+    created_at: datetime
+    updated_at: datetime
+
+    @computed_field
+    @property
+    def low_stock(self) -> bool:
+        """Warned about, never blocking: stock can be bought in."""
+        return self.low_stock_threshold is not None and self.quantity <= self.low_stock_threshold
+
+
+class CrewIn(_Strict):
+    """Availability is weekly hours rather than a calendar: enough to tell
+    whether a job fits, without asking owners to keep a roster up to date."""
+
+    name: PlaceName
+    headcount: Headcount = 1
+    weekly_capacity_hours: CapacityHours
+    active: bool = True
+
+
+class CrewUpdate(_Patch):
+    name: PlaceName | None = None
+    headcount: Headcount | None = None
+    weekly_capacity_hours: CapacityHours | None = None
+    active: bool | None = None
+
+
+class CrewOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    headcount: int
+    weekly_capacity_hours: Decimal
+    active: bool
     created_at: datetime
     updated_at: datetime

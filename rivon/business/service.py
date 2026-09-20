@@ -7,13 +7,24 @@ Every query filters by tenant_id as well as running under tenant RLS.
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import TypeVar
 
 from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from rivon.business.models import Business, PricingRule, PricingSettings, Service
+from pydantic import BaseModel
+
+from rivon.business.models import (
+    Business,
+    Crew,
+    InventoryItem,
+    PricingRule,
+    PricingSettings,
+    Service,
+    ServiceArea,
+)
 from rivon.business.schemas import (
     BusinessProfileIn,
     PricingRuleIn,
@@ -30,6 +41,10 @@ class DuplicateServiceName(Exception):
 
 class DuplicateRuleName(Exception):
     pass
+
+
+class DuplicateName(Exception):
+    """A service area, stock item or crew already uses that name."""
 
 
 class MarginBelowMinimum(Exception):
@@ -86,6 +101,9 @@ async def get_service(
 _UNIQUE_NAME_ERRORS: dict[str, type[Exception]] = {
     "uq_services_tenant_id_name_active": DuplicateServiceName,
     "uq_pricing_rules_tenant_id_service_id_name": DuplicateRuleName,
+    "uq_service_areas_tenant_id_name": DuplicateName,
+    "uq_inventory_items_tenant_id_name": DuplicateName,
+    "uq_crews_tenant_id_name": DuplicateName,
 }
 
 
@@ -217,4 +235,54 @@ async def update_pricing_rule(
 async def delete_pricing_rule(session: AsyncSession, rule: PricingRule) -> None:
     """Hard delete: quotations keep their own copy of the lines they priced."""
     await session.delete(rule)
+    await session.flush()
+
+
+# --- Capacity (BIZ-05/06/07) --------------------------------------------------
+#
+# Three near-identical collections, so they share these helpers rather than
+# repeating the same five functions three times.
+
+CapacityModel = TypeVar("CapacityModel", ServiceArea, InventoryItem, Crew)
+
+
+async def list_capacity(
+    session: AsyncSession, model: type[CapacityModel], tenant_id: uuid.UUID
+) -> list[CapacityModel]:
+    rows = await session.scalars(
+        select(model).where(model.tenant_id == tenant_id).order_by(func.lower(model.name))
+    )
+    return list(rows.all())
+
+
+async def get_capacity(
+    session: AsyncSession, model: type[CapacityModel], tenant_id: uuid.UUID, row_id: uuid.UUID
+) -> CapacityModel | None:
+    return await session.scalar(
+        select(model).where(model.tenant_id == tenant_id, model.id == row_id)
+    )
+
+
+async def create_capacity(
+    session: AsyncSession, model: type[CapacityModel], tenant_id: uuid.UUID, data: BaseModel
+) -> CapacityModel:
+    row = model(id=uuid.uuid4(), tenant_id=tenant_id, **data.model_dump())
+    session.add(row)
+    await _flush_checking_names(session)
+    await session.refresh(row)
+    return row
+
+
+async def update_capacity(
+    session: AsyncSession, row: CapacityModel, changes: BaseModel
+) -> CapacityModel:
+    for field in changes.model_fields_set:
+        setattr(row, field, getattr(changes, field))
+    await _flush_checking_names(session)
+    await session.refresh(row)
+    return row
+
+
+async def delete_capacity(session: AsyncSession, row: CapacityModel) -> None:
+    await session.delete(row)
     await session.flush()

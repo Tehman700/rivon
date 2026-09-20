@@ -242,3 +242,79 @@ class PricingRule(BaseMixin, TenantScopedMixin, Base):
             CheckConstraint("included_quantity >= 0", name="included_quantity_not_negative"),
             CheckConstraint("minimum_quantity >= 0", name="minimum_quantity_not_negative"),
         )
+
+
+class ServiceArea(BaseMixin, TenantScopedMixin, Base):
+    """Somewhere the business will travel to. Named places, not map polygons
+    (spec BIZ-05); postal prefixes make matching an address reliable."""
+
+    __tablename__ = "service_areas"
+
+    name: Mapped[str] = mapped_column(String(120))  # "Berlin", "Brandenburg"
+    country: Mapped[str] = mapped_column(String(2))  # ISO 3166-1 alpha-2
+    # e.g. ["101", "102"]: an address matches if its postcode starts with one.
+    postal_prefixes: Mapped[list[str]] = mapped_column(JSONB, server_default=text("'[]'::jsonb"))
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            Index(
+                "uq_service_areas_tenant_id_name",
+                "tenant_id",
+                func.lower(text("name")),
+                unique=True,
+            ),
+            CheckConstraint("country ~ '^[A-Z]{2}$'", name="country_iso2"),
+            CheckConstraint("jsonb_typeof(postal_prefixes) = 'array'", name="postal_prefixes_array"),
+        )
+
+
+class InventoryItem(BaseMixin, TenantScopedMixin, Base):
+    """Stock the business holds. Feasibility checks quantities against what a
+    job needs (BIZ-06); reservations come with the jobs module in v2."""
+
+    __tablename__ = "inventory_items"
+
+    name: Mapped[str] = mapped_column(String(120))
+    sku: Mapped[str | None] = mapped_column(String(60))
+    unit_label: Mapped[str] = mapped_column(String(20))  # panel, kWh, metre
+    quantity: Mapped[Decimal] = mapped_column(Numeric(12, 2), server_default="0")
+    # Below this, the owner is warned rather than blocked.
+    low_stock_threshold: Mapped[Decimal | None] = mapped_column(Numeric(12, 2))
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            Index(
+                "uq_inventory_items_tenant_id_name",
+                "tenant_id",
+                func.lower(text("name")),
+                unique=True,
+            ),
+            CheckConstraint("quantity >= 0", name="quantity_not_negative"),
+            CheckConstraint(
+                "low_stock_threshold IS NULL OR low_stock_threshold >= 0",
+                name="low_stock_threshold_not_negative",
+            ),
+        )
+
+
+class Crew(BaseMixin, TenantScopedMixin, Base):
+    """A team that can be sent to a job. Availability is weekly capacity in
+    hours (BIZ-07): enough for the feasibility check, without a calendar."""
+
+    __tablename__ = "crews"
+
+    name: Mapped[str] = mapped_column(String(120))
+    headcount: Mapped[int] = mapped_column(Integer, server_default="1")
+    weekly_capacity_hours: Mapped[Decimal] = mapped_column(Numeric(6, 2))
+    # Off means on leave, between hires, or otherwise not schedulable.
+    active: Mapped[bool] = mapped_column(Boolean, server_default="true")
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            Index("uq_crews_tenant_id_name", "tenant_id", func.lower(text("name")), unique=True),
+            CheckConstraint("headcount >= 1", name="headcount_positive"),
+            CheckConstraint("weekly_capacity_hours > 0", name="weekly_capacity_positive"),
+        )

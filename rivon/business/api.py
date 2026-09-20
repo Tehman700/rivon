@@ -4,15 +4,24 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from rivon.business import service as business
-from rivon.business.models import PricingRule, Service
+from rivon.business.models import Crew, InventoryItem, PricingRule, Service, ServiceArea
 from rivon.business.schemas import (
     BusinessProfileIn,
     BusinessProfileOut,
+    CrewIn,
+    CrewOut,
+    CrewUpdate,
+    InventoryItemIn,
+    InventoryItemOut,
+    InventoryItemUpdate,
     PricingRuleIn,
     PricingRuleOut,
     PricingRuleUpdate,
     PricingSettingsIn,
     PricingSettingsOut,
+    ServiceAreaIn,
+    ServiceAreaOut,
+    ServiceAreaUpdate,
     ServiceCreate,
     ServiceOut,
     ServiceUpdate,
@@ -181,4 +190,117 @@ async def delete_pricing_rule(
     service_id: uuid.UUID, rule_id: uuid.UUID, ctx: Tenant, _: Owner
 ) -> Response:
     await business.delete_pricing_rule(ctx.session, await _rule_or_404(ctx, service_id, rule_id))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Capacity: service areas, inventory, crews (BIZ-05/06/07) -----------------
+
+
+def _duplicate(what: str) -> HTTPException:
+    return HTTPException(status.HTTP_409_CONFLICT, f"You already have {what} with that name")
+
+
+async def _capacity_or_404(
+    ctx: TenantContext, model: type, row_id: uuid.UUID, what: str
+):  # type: ignore[no-untyped-def]
+    row = await business.get_capacity(ctx.session, model, ctx.tenant_id, row_id)
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"{what} not found")
+    return row
+
+
+@router.get("/service-areas")
+async def list_service_areas(ctx: Tenant) -> list[ServiceAreaOut]:
+    rows = await business.list_capacity(ctx.session, ServiceArea, ctx.tenant_id)
+    return [ServiceAreaOut.model_validate(row) for row in rows]
+
+
+@router.post("/service-areas", status_code=status.HTTP_201_CREATED)
+async def create_service_area(body: ServiceAreaIn, ctx: Tenant, _: Owner) -> ServiceAreaOut:
+    try:
+        row = await business.create_capacity(ctx.session, ServiceArea, ctx.tenant_id, body)
+    except business.DuplicateName:
+        raise _duplicate("a service area") from None
+    return ServiceAreaOut.model_validate(row)
+
+
+@router.patch("/service-areas/{area_id}")
+async def update_service_area(
+    area_id: uuid.UUID, body: ServiceAreaUpdate, ctx: Tenant, _: Owner
+) -> ServiceAreaOut:
+    row = await _capacity_or_404(ctx, ServiceArea, area_id, "Service area")
+    try:
+        row = await business.update_capacity(ctx.session, row, body)
+    except business.DuplicateName:
+        raise _duplicate("a service area") from None
+    return ServiceAreaOut.model_validate(row)
+
+
+@router.delete("/service-areas/{area_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_service_area(area_id: uuid.UUID, ctx: Tenant, _: Owner) -> Response:
+    await business.delete_capacity(ctx.session, await _capacity_or_404(ctx, ServiceArea, area_id, "Service area"))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/inventory")
+async def list_inventory(ctx: Tenant) -> list[InventoryItemOut]:
+    rows = await business.list_capacity(ctx.session, InventoryItem, ctx.tenant_id)
+    return [InventoryItemOut.model_validate(row) for row in rows]
+
+
+@router.post("/inventory", status_code=status.HTTP_201_CREATED)
+async def create_inventory_item(body: InventoryItemIn, ctx: Tenant, _: Owner) -> InventoryItemOut:
+    try:
+        row = await business.create_capacity(ctx.session, InventoryItem, ctx.tenant_id, body)
+    except business.DuplicateName:
+        raise _duplicate("an item") from None
+    return InventoryItemOut.model_validate(row)
+
+
+@router.patch("/inventory/{item_id}")
+async def update_inventory_item(
+    item_id: uuid.UUID, body: InventoryItemUpdate, ctx: Tenant, _: Owner
+) -> InventoryItemOut:
+    row = await _capacity_or_404(ctx, InventoryItem, item_id, "Item")
+    try:
+        row = await business.update_capacity(ctx.session, row, body)
+    except business.DuplicateName:
+        raise _duplicate("an item") from None
+    return InventoryItemOut.model_validate(row)
+
+
+@router.delete("/inventory/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_inventory_item(item_id: uuid.UUID, ctx: Tenant, _: Owner) -> Response:
+    await business.delete_capacity(ctx.session, await _capacity_or_404(ctx, InventoryItem, item_id, "Item"))
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/crews")
+async def list_crews(ctx: Tenant) -> list[CrewOut]:
+    rows = await business.list_capacity(ctx.session, Crew, ctx.tenant_id)
+    return [CrewOut.model_validate(row) for row in rows]
+
+
+@router.post("/crews", status_code=status.HTTP_201_CREATED)
+async def create_crew(body: CrewIn, ctx: Tenant, _: Owner) -> CrewOut:
+    try:
+        row = await business.create_capacity(ctx.session, Crew, ctx.tenant_id, body)
+    except business.DuplicateName:
+        raise _duplicate("a crew") from None
+    return CrewOut.model_validate(row)
+
+
+@router.patch("/crews/{crew_id}")
+async def update_crew(crew_id: uuid.UUID, body: CrewUpdate, ctx: Tenant, _: Owner) -> CrewOut:
+    row = await _capacity_or_404(ctx, Crew, crew_id, "Crew")
+    try:
+        row = await business.update_capacity(ctx.session, row, body)
+    except business.DuplicateName:
+        raise _duplicate("a crew") from None
+    return CrewOut.model_validate(row)
+
+
+@router.delete("/crews/{crew_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_crew(crew_id: uuid.UUID, ctx: Tenant, _: Owner) -> Response:
+    await business.delete_capacity(ctx.session, await _capacity_or_404(ctx, Crew, crew_id, "Crew"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
