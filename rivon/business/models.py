@@ -318,3 +318,29 @@ class Crew(BaseMixin, TenantScopedMixin, Base):
             CheckConstraint("headcount >= 1", name="headcount_positive"),
             CheckConstraint("weekly_capacity_hours > 0", name="weekly_capacity_positive"),
         )
+
+
+class VerticalSettings(BaseMixin, TenantScopedMixin, Base):
+    """The tunable half of a vertical's configuration (BIZ-08). The questions
+    themselves live in code (rivon/business/verticals.py); these are the
+    numbers each business adjusts. One row per tenant."""
+
+    __tablename__ = "vertical_settings"
+
+    vertical: Mapped[str] = mapped_column(String(32), server_default="solar")
+    # How much a kWp generates in a year here, and how much roof it needs.
+    annual_kwh_per_kwp: Mapped[Decimal] = mapped_column(Numeric(6, 2), server_default="950")
+    roof_area_m2_per_kwp: Mapped[Decimal] = mapped_column(Numeric(6, 2), server_default="5")
+    # How many times the assistant chases a missing answer before handing the
+    # conversation to the owner (CNV-04). 0 means hand over immediately.
+    max_followups: Mapped[int] = mapped_column(Integer, server_default="2")
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            UniqueConstraint("tenant_id"),
+            CheckConstraint("vertical IN ('solar')", name="known_vertical"),
+            CheckConstraint("annual_kwh_per_kwp > 0", name="annual_kwh_per_kwp_positive"),
+            CheckConstraint("roof_area_m2_per_kwp > 0", name="roof_area_per_kwp_positive"),
+            CheckConstraint("max_followups BETWEEN 0 AND 5", name="max_followups_range"),
+        )

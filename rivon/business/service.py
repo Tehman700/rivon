@@ -24,7 +24,9 @@ from rivon.business.models import (
     PricingSettings,
     Service,
     ServiceArea,
+    VerticalSettings,
 )
+from rivon.business.verticals import DEFAULT_VERTICAL, SizingConstants
 from rivon.business.schemas import (
     BusinessProfileIn,
     PricingRuleIn,
@@ -286,3 +288,47 @@ async def update_capacity(
 async def delete_capacity(session: AsyncSession, row: CapacityModel) -> None:
     await session.delete(row)
     await session.flush()
+
+
+# --- Vertical configuration (BIZ-08) -----------------------------------------
+
+
+async def get_vertical_settings(
+    session: AsyncSession, tenant_id: uuid.UUID
+) -> VerticalSettings | None:
+    return await session.scalar(
+        select(VerticalSettings).where(VerticalSettings.tenant_id == tenant_id)
+    )
+
+
+async def ensure_vertical_settings(
+    session: AsyncSession, tenant_id: uuid.UUID
+) -> VerticalSettings:
+    """Settings exist for every tenant; the defaults are sensible, so create
+    them on first read rather than making the owner fill a form to start."""
+    settings = await get_vertical_settings(session, tenant_id)
+    if settings is not None:
+        return settings
+    settings = VerticalSettings(id=uuid.uuid4(), tenant_id=tenant_id, vertical=DEFAULT_VERTICAL)
+    session.add(settings)
+    await session.flush()
+    await session.refresh(settings)
+    return settings
+
+
+async def put_vertical_settings(
+    session: AsyncSession, tenant_id: uuid.UUID, data: BaseModel
+) -> VerticalSettings:
+    settings = await ensure_vertical_settings(session, tenant_id)
+    for field, value in data.model_dump().items():
+        setattr(settings, field, value)
+    await session.flush()
+    await session.refresh(settings)
+    return settings
+
+
+def sizing_constants(settings: VerticalSettings) -> SizingConstants:
+    return SizingConstants(
+        annual_kwh_per_kwp=settings.annual_kwh_per_kwp,
+        roof_area_m2_per_kwp=settings.roof_area_m2_per_kwp,
+    )

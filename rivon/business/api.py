@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from rivon.business import service as business
 from rivon.business.models import Crew, InventoryItem, PricingRule, Service, ServiceArea
+from rivon.business.verticals import VERTICALS, estimate_system_size
 from rivon.business.schemas import (
     BusinessProfileIn,
     BusinessProfileOut,
@@ -19,12 +20,19 @@ from rivon.business.schemas import (
     PricingRuleUpdate,
     PricingSettingsIn,
     PricingSettingsOut,
+    FieldGroupOut,
+    FieldOut,
     ServiceAreaIn,
     ServiceAreaOut,
     ServiceAreaUpdate,
     ServiceCreate,
     ServiceOut,
     ServiceUpdate,
+    SizeEstimateOut,
+    SizeEstimateRequest,
+    VerticalOut,
+    VerticalSettingsIn,
+    VerticalSettingsOut,
 )
 from rivon.platform.permissions import require_owner
 from rivon.platform.security import Principal
@@ -304,3 +312,66 @@ async def update_crew(crew_id: uuid.UUID, body: CrewUpdate, ctx: Tenant, _: Owne
 async def delete_crew(crew_id: uuid.UUID, ctx: Tenant, _: Owner) -> Response:
     await business.delete_capacity(ctx.session, await _capacity_or_404(ctx, Crew, crew_id, "Crew"))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- Vertical configuration (BIZ-08) -----------------------------------------
+
+
+def _vertical_out(settings) -> VerticalOut:  # type: ignore[no-untyped-def]
+    vertical = VERTICALS[settings.vertical]
+    return VerticalOut(
+        key=vertical.key,
+        label=vertical.label,
+        groups=[
+            FieldGroupOut(
+                key=group.key,
+                label=group.label,
+                fields=[
+                    FieldOut(
+                        name=f.name,
+                        kind=f.kind.value,
+                        label=f.label,
+                        question=f.question,
+                        unit=f.unit,
+                        choices=list(f.choices),
+                        required=f.required,
+                    )
+                    for f in group.fields
+                ],
+            )
+            for group in vertical.groups
+        ],
+        required_any_of=[list(group) for group in vertical.required_any_of],
+        settings=VerticalSettingsOut.model_validate(settings),
+    )
+
+
+@router.get("/vertical")
+async def get_vertical(ctx: Tenant) -> VerticalOut:
+    """What the assistant asks, plus this business's tuning."""
+    settings = await business.ensure_vertical_settings(ctx.session, ctx.tenant_id)
+    return _vertical_out(settings)
+
+
+@router.put("/vertical/settings")
+async def put_vertical_settings(body: VerticalSettingsIn, ctx: Tenant, _: Owner) -> VerticalOut:
+    settings = await business.put_vertical_settings(ctx.session, ctx.tenant_id, body)
+    return _vertical_out(settings)
+
+
+@router.post("/vertical/size-estimate")
+async def preview_size_estimate(body: SizeEstimateRequest, ctx: Tenant) -> SizeEstimateOut:
+    """Show how the sizing rule behaves with this business's numbers.
+
+    The same arithmetic quotations will use: no model is involved, so the
+    owner can check it and adjust the constants until it matches their judgement.
+    """
+    settings = await business.ensure_vertical_settings(ctx.session, ctx.tenant_id)
+    requirements = body.model_dump(exclude_none=True)
+    estimate = estimate_system_size(requirements, business.sizing_constants(settings))
+    return SizeEstimateOut(
+        system_size_kwp=estimate.system_size_kwp,
+        basis=estimate.basis,
+        explanation=estimate.explanation,
+        missing_for_quote=VERTICALS[settings.vertical].missing_for_quote(requirements),
+    )

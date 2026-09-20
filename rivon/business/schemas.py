@@ -370,3 +370,62 @@ class CrewOut(BaseModel):
     active: bool
     created_at: datetime
     updated_at: datetime
+
+
+# --- Vertical configuration (BIZ-08) -----------------------------------------
+
+
+class VerticalSettingsIn(_Strict):
+    """The numbers a business tunes. The questions themselves are fixed."""
+
+    annual_kwh_per_kwp: Annotated[Decimal, Field(gt=0, le=2000, max_digits=6, decimal_places=2)]
+    roof_area_m2_per_kwp: Annotated[Decimal, Field(gt=0, le=50, max_digits=6, decimal_places=2)]
+    max_followups: Annotated[int, Field(ge=0, le=5)]
+
+
+class VerticalSettingsOut(VerticalSettingsIn):
+    model_config = ConfigDict(from_attributes=True)
+
+    vertical: str
+    updated_at: datetime
+
+
+class FieldOut(BaseModel):
+    name: str
+    kind: str
+    label: str
+    question: str
+    unit: str | None
+    choices: list[str]
+    required: bool
+
+
+class FieldGroupOut(BaseModel):
+    key: str
+    label: str
+    fields: list[FieldOut]
+
+
+class VerticalOut(BaseModel):
+    """What the assistant will ask, and what a quote needs before it can be priced."""
+
+    key: str
+    label: str
+    groups: list[FieldGroupOut]
+    required_any_of: list[list[str]]
+    settings: VerticalSettingsOut
+
+
+class SizeEstimateRequest(_Strict):
+    """A slice of the requirements, for previewing how the sizing behaves."""
+
+    system_size_kwp: Annotated[Decimal, Field(gt=0, le=10_000)] | None = None
+    annual_consumption_kwh: Annotated[Decimal, Field(gt=0, le=10_000_000)] | None = None
+    roof_area_m2: Annotated[Decimal, Field(gt=0, le=100_000)] | None = None
+
+
+class SizeEstimateOut(BaseModel):
+    system_size_kwp: Decimal | None
+    basis: str
+    explanation: str
+    missing_for_quote: list[str]
