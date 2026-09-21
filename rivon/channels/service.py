@@ -144,6 +144,17 @@ async def list_connections(
     return list(result.scalars())
 
 
+async def connection_for(
+    session: AsyncSession, tenant_id: uuid.UUID, provider: Channel, external_id: str
+) -> ChannelConnection | None:
+    """The connection for one account of this tenant, whatever its status.
+
+    Used when a message has already been routed here and we need the credential
+    to answer it.
+    """
+    return await _find(session, tenant_id, provider, external_id)
+
+
 async def get_connection(
     session: AsyncSession, tenant_id: uuid.UUID, connection_id: uuid.UUID
 ) -> ChannelConnection:

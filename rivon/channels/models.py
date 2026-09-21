@@ -27,6 +27,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Integer,
     LargeBinary,
     String,
     Text,
@@ -184,3 +185,53 @@ class ReceivedMessage(BaseMixin, TenantScopedMixin, Base):
             ),
             Index("ix_inbound_messages_tenant_id_account_id", "tenant_id", "account_id"),
         )
+
+
+class SendStatus(StrEnum):
+    PENDING = "pending"
+    SENT = "sent"
+    #: Given up on. Kept so someone can see what was never delivered, rather
+    #: than a customer's question simply going unanswered with no trace.
+    FAILED = "failed"
+
+
+class OutboundMessageRecord(BaseMixin, TenantScopedMixin, Base):
+    """CHN-05: one row per thing we intend to say, written before we say it.
+
+    `dedupe_key` is unique per tenant and is the whole point of the table. An
+    event can be redelivered and a task can be retried; both must converge on
+    one message to a real person. Whoever asks for a send supplies a key
+    derived from its cause, so the second attempt recognises the first.
+    """
+
+    __tablename__ = "outbound_messages"
+
+    channel: Mapped[Channel] = mapped_column(_string_enum(Channel, "channel_provider"))
+    account_id: Mapped[str] = mapped_column(String(64))
+    contact_id: Mapped[str] = mapped_column(String(128))
+    text: Mapped[str] = mapped_column(Text)
+    dedupe_key: Mapped[str] = mapped_column(String(128))
+    reply_to_provider_message_id: Mapped[str | None] = mapped_column(String(128), default=None)
+
+    status: Mapped[SendStatus] = mapped_column(
+        _string_enum(SendStatus, "outbound_status"), default=SendStatus.PENDING
+    )
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+    #: Meta's id for the message, once it has one. Lets a later delivery or read
+    #: receipt be matched back to what we sent.
+    provider_message_id: Mapped[str | None] = mapped_column(String(128), default=None)
+    last_error: Mapped[str | None] = mapped_column(String(300), default=None)
+    sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            UniqueConstraint(
+                "tenant_id", "dedupe_key", name="uq_outbound_messages_tenant_id_dedupe_key"
+            ),
+            Index("ix_outbound_messages_tenant_id_status", "tenant_id", "status"),
+        )
+
+    @property
+    def is_deliverable(self) -> bool:
+        return self.status is SendStatus.PENDING
