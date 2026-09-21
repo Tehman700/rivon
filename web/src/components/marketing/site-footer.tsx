@@ -29,7 +29,10 @@ export function SiteFooter() {
           <a href={`mailto:${CONTACT_EMAIL}`} className="block break-all text-muted-foreground hover:text-foreground">
             {CONTACT_EMAIL}
           </a>
-          <p className="text-muted-foreground">Privacy notice and terms are in preparation.</p>
+          <Link href="/privacy" className="block text-muted-foreground hover:text-foreground">
+            Privacy notice
+          </Link>
+          <p className="text-muted-foreground">Terms are in preparation.</p>
         </div>
       </div>
       <div className="border-t">
