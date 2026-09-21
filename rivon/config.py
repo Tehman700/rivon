@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     refresh_reuse_grace_seconds: int = 30
     password_reset_ttl_minutes: int = 60
 
+    # Encrypts customers' channel access tokens before they reach the database
+    # (CHN-07). A urlsafe base64 32-byte key; generate one with
+    # `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"`.
+    # Changing it makes existing connections unreadable, and they need reconnecting.
+    channel_token_key: SecretStr | None = None
+
     # Where the dashboard lives; used to build links in emails.
     public_app_url: str = "http://localhost:3000"
 

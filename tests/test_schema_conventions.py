@@ -31,6 +31,11 @@ NOT_TENANT_SCOPED = {
 INDEX_EXCEPTIONS = {
     "uq_users_email": "login identity: owners sign in with email alone, before the tenant is known",
     "ix_outbox_events_unpublished": "the relay's cross-tenant work queue (partial: unpublished only)",
+    "uq_channel_connections_provider_external_id":
+        "an inbound webhook names a Page/number, not a tenant; global uniqueness also stops "
+        "two businesses claiming the same account",
+    "uq_channel_oauth_states_state": "a Meta callback carries only the state value",
+    "ix_channel_oauth_states_expires_at": "housekeeping sweep for states nobody came back for",
 }
 
 # RLS policies other than tenant_isolation: (command, roles) and why. Each one
@@ -39,6 +44,11 @@ EXTRA_POLICIES = {
     ("users", "login_lookup"): (
         ("SELECT", {"public"}),
         "exposes the one user whose email is being logged in",
+    ),
+    ("channel_connections", "route_lookup"): (
+        ("SELECT", {"rivon_owner"}),
+        "lets channel_route() see past FORCE RLS for one lookup; only while the function's "
+        "transaction-local flag is set, and the application role is not covered by it",
     ),
     ("outbox_events", "relay_access"): (
         ("ALL", {"rivon_relay"}),
