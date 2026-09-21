@@ -44,6 +44,21 @@ class Settings(BaseSettings):
     # Changing it makes existing connections unreadable, and they need reconnecting.
     channel_token_key: SecretStr | None = None
 
+    # The one Meta app every tenant connects through (CHN-13). The app id and
+    # the login configuration ids are not secret; the app secret is, and it also
+    # verifies the signature on every inbound webhook.
+    meta_app_id: str | None = None
+    meta_app_secret: SecretStr | None = None
+    # Echoed back once when a webhook is first configured, to prove it is ours.
+    meta_verify_token: SecretStr | None = None
+    # Pinned deliberately: a floating version changes payload shapes under us.
+    meta_graph_version: str = "v25.0"
+    # "Facebook Login for Business" configurations, from the App Dashboard.
+    meta_login_config_pages: str | None = None
+    meta_login_config_whatsapp: str | None = None
+    # Must match the App Dashboard exactly, trailing slash included.
+    meta_redirect_uri: str = "http://localhost:3000/connect/meta/callback"
+
     # Where the dashboard lives; used to build links in emails.
     public_app_url: str = "http://localhost:3000"
 

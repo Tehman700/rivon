@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import pytest
+from cryptography.fernet import Fernet
 from alembic import command
 from alembic.config import Config
 from sqlalchemy import text
@@ -42,6 +43,13 @@ assert _base.relay_database_url, "RIVON_RELAY_DATABASE_URL must be set for tests
 os.environ["RIVON_RELAY_DATABASE_URL"] = _to_test_database(_base.relay_database_url)
 # Keep test queues away from a running dev worker on database 0.
 os.environ["RIVON_REDIS_URL"] = _base.redis_url.rsplit("/", 1)[0] + "/1"
+# Channel credentials are encrypted with a throwaway key, and the Meta app is a
+# stand-in: every test drives the connect flow through a fake Graph.
+os.environ.setdefault("RIVON_CHANNEL_TOKEN_KEY", Fernet.generate_key().decode())
+os.environ.setdefault("RIVON_META_APP_ID", "test-app-id")
+os.environ.setdefault("RIVON_META_APP_SECRET", "test-app-secret")
+os.environ.setdefault("RIVON_META_LOGIN_CONFIG_PAGES", "test-config-pages")
+os.environ.setdefault("RIVON_META_REDIRECT_URI", "https://app.example/connect/meta/callback")
 get_settings.cache_clear()
 
 
