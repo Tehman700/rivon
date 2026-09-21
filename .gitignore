@@ -14,3 +14,7 @@ htmlcov/
 design-files/
 *.pem
 scripts/.prod_*
+
+# Local credential notes, never committed.
+local_secret*
+*secret*.txt
