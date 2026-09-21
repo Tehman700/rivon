@@ -32,6 +32,9 @@ export function SiteFooter() {
           <Link href="/privacy" className="block text-muted-foreground hover:text-foreground">
             Privacy notice
           </Link>
+          <Link href="/data-deletion" className="block text-muted-foreground hover:text-foreground">
+            Delete your data
+          </Link>
           <p className="text-muted-foreground">Terms are in preparation.</p>
         </div>
       </div>

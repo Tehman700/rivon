@@ -16,6 +16,7 @@ const PUBLIC_PAGES = new Set([
   "/reset-password",
   "/request-access",
   "/privacy",
+  "/data-deletion",
 ])
 
 /**

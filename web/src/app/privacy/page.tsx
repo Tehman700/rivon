@@ -528,7 +528,13 @@ export default function PrivacyPage() {
           </Section>
 
           <Section id="data-deletion" title="13. Deleting your data">
-            <p>To have your data removed, email {mail} with the subject line “Data deletion”, and:</p>
+            <p>
+              Full instructions are on their own page:{" "}
+              <Link href="/data-deletion" className="underline underline-offset-4 hover:text-foreground">
+                Delete your data
+              </Link>
+              . In short, email {mail} with the subject line “Data deletion”, and:
+            </p>
             <ul className="list-disc space-y-2 pl-5">
               <li>
                 if you have a Rivon account, the email address on it; or
