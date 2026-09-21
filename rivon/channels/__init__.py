@@ -3,6 +3,8 @@
 Downstream modules import from here and never from a provider's payload shape.
 """
 
+# Importing these registers the real adapters.
+import rivon.channels.providers  # noqa: F401
 from rivon.channels.adapters import (
     AdapterRegistry,
     ChannelAdapter,

@@ -48,6 +48,7 @@ os.environ["RIVON_REDIS_URL"] = _base.redis_url.rsplit("/", 1)[0] + "/1"
 os.environ.setdefault("RIVON_CHANNEL_TOKEN_KEY", Fernet.generate_key().decode())
 os.environ.setdefault("RIVON_META_APP_ID", "test-app-id")
 os.environ.setdefault("RIVON_META_APP_SECRET", "test-app-secret")
+os.environ.setdefault("RIVON_META_VERIFY_TOKEN", "test-verify-token")
 os.environ.setdefault("RIVON_META_LOGIN_CONFIG_PAGES", "test-config-pages")
 os.environ.setdefault("RIVON_META_REDIRECT_URI", "https://app.example/connect/meta/callback")
 get_settings.cache_clear()

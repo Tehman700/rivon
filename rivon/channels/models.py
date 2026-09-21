@@ -29,6 +29,7 @@ from sqlalchemy import (
     Index,
     LargeBinary,
     String,
+    Text,
     UniqueConstraint,
     func,
 )
@@ -141,4 +142,45 @@ class ChannelOAuthState(BaseMixin, TenantScopedMixin, Base):
         return cls.tenant_table_args(
             UniqueConstraint("state", name="uq_channel_oauth_states_state"),
             Index("ix_channel_oauth_states_expires_at", "expires_at"),
+        )
+
+
+class ReceivedMessage(BaseMixin, TenantScopedMixin, Base):
+    """CHN-02/04: a customer message, exactly as it arrived.
+
+    Written by the webhook before any work is done on it, so a message is never
+    lost to a crash further down. `provider_message_id` is unique per tenant:
+    Meta retries anything it thinks we mishandled, and that constraint is what
+    turns a retry into a no-op instead of a second reply to a real person.
+
+    `raw` keeps the provider's own fragment, so a conversation can be explained
+    later, or re-read after a parsing bug is fixed, without asking Meta again.
+    """
+
+    __tablename__ = "inbound_messages"
+
+    channel: Mapped[Channel] = mapped_column(_string_enum(Channel, "channel_provider"))
+    #: The business account it arrived at. Kept alongside tenant_id because one
+    #: business can connect several numbers or Pages.
+    account_id: Mapped[str] = mapped_column(String(64))
+    contact_id: Mapped[str] = mapped_column(String(128))
+    contact_name: Mapped[str | None] = mapped_column(String(120), default=None)
+    provider_message_id: Mapped[str] = mapped_column(String(128))
+    text: Mapped[str | None] = mapped_column(Text, default=None)
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    reply_to_provider_message_id: Mapped[str | None] = mapped_column(String(128), default=None)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    raw: Mapped[dict[str, Any]] = mapped_column(JSONB, default=dict)
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            UniqueConstraint(
+                "tenant_id", "provider_message_id",
+                name="uq_inbound_messages_tenant_id_provider_message_id",
+            ),
+            Index("ix_inbound_messages_tenant_id_account_id", "tenant_id", "account_id"),
         )
