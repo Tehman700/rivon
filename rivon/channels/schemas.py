@@ -51,3 +51,28 @@ class ConnectOutcomeOut(BaseModel):
 
     connected: list[ConnectionOut]
     skipped: list[SkippedOut]
+
+
+class WhatsAppSignupIn(BaseModel):
+    """What the browser captures from Embedded Signup.
+
+    `waba_id` and `phone_number_id` arrive through the WA_EMBEDDED_SIGNUP
+    browser event, not the redirect, so the page has to send them with the code.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1, max_length=2048)
+    waba_id: str = Field(min_length=1, max_length=64)
+    phone_number_id: str = Field(min_length=1, max_length=64)
+    #: The number's two-step PIN. Omitted for a new number, in which case we
+    #: choose one and hand it back exactly once.
+    pin: str | None = Field(default=None, pattern=r"^\d{6}$")
+
+
+class WhatsAppConnectedOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    connection: ConnectionOut
+    #: Shown once and never stored. Null when the customer supplied their own.
+    registration_pin: str | None

@@ -16,6 +16,7 @@ that each Page was successfully subscribed, because an unsubscribed Page looks
 perfectly connected and silently receives nothing.
 """
 
+import secrets
 import uuid
 from dataclasses import dataclass
 
@@ -215,26 +216,26 @@ async def disconnect_and_unsubscribe(
     graph: MetaGraph,
     cipher: TokenCipher | None = None,
 ) -> ChannelConnection:
-    """Disconnect here, and stop Meta sending, when nothing else needs the Page.
+    """Disconnect here, and stop Meta sending once nothing else needs the account.
 
-    A Page and the Instagram account attached to it share one token and one
-    subscription, so unsubscribing while the other is still connected would
-    quietly break it.
+    Several connections can share one subscription: a Page and the Instagram
+    account attached to it, or two numbers on one WhatsApp account. Unsubscribing
+    while another is still connected would quietly break it, so the subscription
+    only goes when the last of them does.
     """
     connection = await service.get_connection(session, tenant_id, connection_id)
-    page_id = connection.parent_external_id or connection.external_id
+    #: The Page, or the WhatsApp account — whatever holds the subscription.
+    account_id = connection.parent_external_id or connection.external_id
     try:
-        page_token = await service.access_token_for(
-            session, tenant_id, connection_id, cipher=cipher
-        )
+        token = await service.access_token_for(session, tenant_id, connection_id, cipher=cipher)
     except TokenUnreadable:
-        page_token = None  # nothing to unsubscribe with; still disconnect locally
+        token = None  # nothing to unsubscribe with; still disconnect locally
 
     disconnected = await service.disconnect(session, tenant_id, connection_id)
 
-    if page_token and not await _page_still_in_use(session, tenant_id, page_id):
+    if token and not await _account_still_in_use(session, tenant_id, account_id):
         try:
-            await graph.unsubscribe_page(page_id, page_token)
+            await graph.unsubscribe_account(account_id, token)
         except MetaApiError:
             # Meta's side is now out of step with ours, but the customer asked
             # to be disconnected and locally they are: we no longer hold a
@@ -243,13 +244,122 @@ async def disconnect_and_unsubscribe(
     return disconnected
 
 
-async def _page_still_in_use(session: AsyncSession, tenant_id: uuid.UUID, page_id: str) -> bool:
+async def _account_still_in_use(
+    session: AsyncSession, tenant_id: uuid.UUID, account_id: str
+) -> bool:
     result = await session.execute(
         select(ChannelConnection.id).where(
             ChannelConnection.tenant_id == tenant_id,
             ChannelConnection.status == ConnectionStatus.ACTIVE,
-            (ChannelConnection.external_id == page_id)
-            | (ChannelConnection.parent_external_id == page_id),
+            (ChannelConnection.external_id == account_id)
+            | (ChannelConnection.parent_external_id == account_id),
         )
     )
     return result.first() is not None
+
+
+# --- WhatsApp: Embedded Signup ------------------------------------------------
+
+#: What a WhatsApp account must have granted before we will claim to run it.
+REQUIRED_WHATSAPP_SCOPES = ("whatsapp_business_messaging", "whatsapp_business_management")
+
+#: Meta's "this number already has a different two-step PIN".
+PIN_MISMATCH = 133005
+
+
+class RegistrationPinWrong(ConnectFailed):
+    def __init__(self) -> None:
+        super().__init__(
+            "That number already has a two-step verification PIN. Enter the existing "
+            "PIN to finish connecting it."
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class WhatsAppConnected:
+    connection: ChannelConnection
+    #: Returned once, never stored. The customer needs it if they ever move the
+    #: number, and we have no business keeping their PIN.
+    registration_pin: str | None = None
+
+
+def generate_registration_pin() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+
+async def complete_whatsapp_signup(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    code: str,
+    waba_id: str,
+    phone_number_id: str,
+    graph: MetaGraph,
+    pin: str | None = None,
+    connected_by_user_id: uuid.UUID | None = None,
+    cipher: TokenCipher | None = None,
+) -> WhatsAppConnected:
+    """Finish an Embedded Signup.
+
+    Different in shape from the Page flow, because Meta creates the customer's
+    WhatsApp account during the dialog rather than handing us one they already
+    had. Two consequences run through this function:
+
+    The `waba_id` and `phone_number_id` arrive through a browser event, not the
+    redirect, so they are passed in rather than discovered here. If the caller
+    lost them, nothing below can recover them.
+
+    The code has a thirty-second life, so this is called immediately and does
+    the exchange first. Everything else can be retried; that cannot.
+    """
+    grant = await graph.exchange_code(code, redirect_uri="")
+    granted = await graph.inspect_token(grant.access_token)
+    if not granted.is_valid:
+        raise ConnectFailed("Meta says that authorisation is not valid. Please try again.")
+
+    missing = tuple(s for s in REQUIRED_WHATSAPP_SCOPES if s not in granted.scopes)
+    if missing:
+        raise PermissionsDeclined(missing)
+
+    # Subscribe before registering: an unsubscribed account looks connected and
+    # receives nothing, which is the hardest failure here to diagnose.
+    await graph.subscribe_waba(waba_id, grant.access_token)
+
+    # `None` means the customer has no PIN yet and we choose one. An empty
+    # string is a caller mistake, and must not quietly become a new PIN on a
+    # number that already has one.
+    chosen_pin = generate_registration_pin() if pin is None else pin
+    try:
+        await graph.register_phone_number(phone_number_id, grant.access_token, chosen_pin)
+    except MetaApiError as exc:
+        if exc.code == PIN_MISMATCH or exc.subcode == PIN_MISMATCH:
+            raise RegistrationPinWrong() from exc
+        raise
+
+    number = await graph.phone_number(phone_number_id, grant.access_token)
+    connection = await service.connect(
+        session,
+        tenant_id,
+        ConnectionInput(
+            provider=Channel.WHATSAPP,
+            external_id=phone_number_id,
+            access_token=grant.access_token,
+            parent_external_id=waba_id,
+            display_name=number.label,
+            token_type=grant.token_type,
+            expires_at=granted.expires_at,
+            granted_scopes=granted.scopes,
+            provider_metadata={
+                "display_phone_number": number.display_phone_number,
+                "verified_name": number.verified_name,
+                "quality_rating": number.quality_rating,
+            },
+        ),
+        connected_by_user_id=connected_by_user_id,
+        cipher=cipher,
+    )
+    return WhatsAppConnected(
+        connection=connection, registration_pin=chosen_pin if pin is None else None
+    )
+
+

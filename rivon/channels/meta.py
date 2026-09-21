@@ -75,6 +75,21 @@ class GrantedPage:
 
 
 @dataclass(frozen=True, slots=True)
+class WhatsAppNumber:
+    """A business phone number, as Meta describes it."""
+
+    id: str
+    display_phone_number: str
+    verified_name: str
+    quality_rating: str | None = None
+
+    @property
+    def label(self) -> str:
+        """What to show in the dashboard, preferring the name they chose."""
+        return self.verified_name or self.display_phone_number or self.id
+
+
+@dataclass(frozen=True, slots=True)
 class GraphCall:
     """One request, recorded for tests and for debugging a live connect."""
 
@@ -228,11 +243,57 @@ class MetaGraph:
         if not payload.get("success", True):
             raise MetaApiError(f"Meta refused to subscribe page {page_id}")
 
-    async def unsubscribe_page(self, page_id: str, page_token: str) -> None:
-        """Stop a Page's messages reaching us. Best effort: a customer who has
-        already revoked us at Meta's end leaves nothing to unsubscribe."""
+    # --- WhatsApp ------------------------------------------------------------
+
+    async def subscribe_waba(self, waba_id: str, token: str) -> None:
+        """Point a customer's WhatsApp account at our webhook.
+
+        The WhatsApp equivalent of subscribing a Page, and just as easy to
+        forget: without it the account connects and no message ever arrives.
+        """
+        payload = await self._post(
+            f"{waba_id}/subscribed_apps", {"access_token": token}
+        )
+        if not payload.get("success", True):
+            raise MetaApiError(f"Meta refused to subscribe WhatsApp account {waba_id}")
+
+    async def register_phone_number(self, phone_number_id: str, token: str, pin: str) -> None:
+        """Activate a number for the API.
+
+        The PIN is the number's two-step verification code. On a number that has
+        never had one, this sets it; on one that has, it must match, and Meta
+        answers 133005. That distinction is worth surfacing to the customer,
+        because only they know the existing PIN.
+        """
+        if not (len(pin) == 6 and pin.isdigit()):
+            raise ValueError("a WhatsApp registration PIN is exactly six digits")
+        await self._post(
+            f"{phone_number_id}/register",
+            {"access_token": token, "messaging_product": "whatsapp", "pin": pin},
+        )
+
+    async def phone_number(self, phone_number_id: str, token: str) -> "WhatsAppNumber":
+        """What the customer will see in the dashboard: their number and name."""
+        payload = await self._get(
+            phone_number_id,
+            {"access_token": token, "fields": "display_phone_number,verified_name,quality_rating"},
+        )
+        return WhatsAppNumber(
+            id=phone_number_id,
+            display_phone_number=payload.get("display_phone_number") or "",
+            verified_name=payload.get("verified_name") or "",
+            quality_rating=payload.get("quality_rating"),
+        )
+
+    async def unsubscribe_account(self, account_id: str, token: str) -> None:
+        """Stop an account's messages reaching us.
+
+        The same call for a Page and for a WhatsApp account — Meta uses one
+        endpoint for both. Best effort: a customer who has already revoked us at
+        Meta's end leaves nothing to unsubscribe.
+        """
         try:
-            await self._delete(f"{page_id}/subscribed_apps", {"access_token": page_token})
+            await self._delete(f"{account_id}/subscribed_apps", {"access_token": token})
         except MetaApiError as exc:
             if not exc.is_auth_failure:
                 raise

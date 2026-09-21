@@ -15,6 +15,8 @@ from rivon.channels.schemas import (
     ConnectOutcomeOut,
     ConnectStartOut,
     SkippedOut,
+    WhatsAppConnectedOut,
+    WhatsAppSignupIn,
 )
 from rivon.channels.service import ConnectionNotFound, OAuthStateInvalid
 from rivon.config import Settings, get_settings
@@ -125,6 +127,37 @@ async def finish_connect(
     return ConnectOutcomeOut(
         connected=[_out(row) for row in outcome.connected],
         skipped=[SkippedOut(account=account, reason=reason) for account, reason in outcome.skipped],
+    )
+
+
+@router.post("/whatsapp/complete", response_model=WhatsAppConnectedOut)
+async def finish_whatsapp_signup(
+    body: WhatsAppSignupIn, tenant: Tenant, owner: Owner, graph: Graph
+) -> WhatsAppConnectedOut:
+    """Finish Embedded Signup.
+
+    No `state` to redeem: the browser hands the code straight back rather than
+    going through a redirect, so what proves this request is genuine is the
+    caller's own session. The code lives thirty seconds, so nothing is queued.
+    """
+    try:
+        result = await oauth.complete_whatsapp_signup(
+            tenant.session,
+            tenant.tenant_id,
+            code=body.code,
+            waba_id=body.waba_id,
+            phone_number_id=body.phone_number_id,
+            graph=graph,
+            pin=body.pin,
+            connected_by_user_id=owner.user_id,
+        )
+    except oauth.ConnectFailed as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, str(exc))
+    except MetaApiError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, f"WhatsApp setup failed: {exc}")
+
+    return WhatsAppConnectedOut(
+        connection=_out(result.connection), registration_pin=result.registration_pin
     )
 
 
