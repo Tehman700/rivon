@@ -4,7 +4,7 @@ import type { NextRequest } from "next/server"
 import { ACCESS_COOKIE, apiBaseUrl } from "@/lib/session"
 
 // Only these API areas are reachable from the browser through this proxy.
-const ALLOWED = /^(auth\/me|business(\/[A-Za-z0-9_\-/]*)?)$/
+const ALLOWED = /^(auth\/me|business(\/[A-Za-z0-9_\-/]*)?|channels(\/[A-Za-z0-9_\-/]*)?)$/
 
 async function forward(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params

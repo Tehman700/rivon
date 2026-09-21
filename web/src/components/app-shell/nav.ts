@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   MapPin,
   MessagesSquare,
+  Plug,
   Percent,
   Sparkles,
   Users,
@@ -34,6 +35,7 @@ export const NAV_SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: "Setup",
     items: [
+      { href: "/channels", label: "Channels", icon: Plug },
       { href: "/assistant", label: "Assistant & sizing", icon: Sparkles },
       { href: "/services", label: "Services & rate cards", icon: Wrench },
       { href: "/settings/pricing", label: "Pricing", icon: Percent },

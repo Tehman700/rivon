@@ -169,3 +169,28 @@ export interface SizeEstimate {
   explanation: string
   missing_for_quote: string[]
 }
+
+export type ChannelProvider = "whatsapp" | "messenger" | "instagram"
+export type ConnectionStatus = "active" | "needs_reauth" | "revoked"
+
+export interface ChannelConnection {
+  id: string
+  provider: ChannelProvider
+  external_id: string
+  display_name: string | null
+  status: ConnectionStatus
+  status_detail: string | null
+  granted_scopes: string[]
+  expires_at: string | null
+  connected_at: string
+  needs_attention: boolean
+}
+
+export interface ConnectStart {
+  authorize_url: string
+}
+
+export interface ConnectOutcome {
+  connected: ChannelConnection[]
+  skipped: { account: string; reason: string }[]
+}
