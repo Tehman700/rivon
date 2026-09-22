@@ -49,9 +49,16 @@ export async function api<T = unknown>(
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<T> {
+  const method = init.method ?? "GET"
+  // The proxy refuses anything that could carry a body unless it says JSON —
+  // that is what stops a cross-site form posting here, since a form can never
+  // send this content type. A POST with no body still has to declare it, or it
+  // is turned away as though it were one. Keep this list in step with the one
+  // in app/api/backend/[...path]/route.ts.
+  const mayHaveBody = !["GET", "HEAD", "DELETE"].includes(method)
   const response = await fetch(`/api/backend${path}`, {
-    method: init.method ?? "GET",
-    headers: init.body === undefined ? {} : { "content-type": "application/json" },
+    method,
+    headers: mayHaveBody ? { "content-type": "application/json" } : {},
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
   })
   if (response.status === 401) {
