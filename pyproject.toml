@@ -10,6 +10,10 @@ dependencies = [
     "celery[redis]>=5.6.3",
     "cryptography>=44.0",
     "fastapi>=0.115",
+    "httpx>=0.28",
+    # Imported directly by the worker for queue definitions. It arrives with
+    # celery anyway, but we import it, so we declare it.
+    "kombu>=5.6",
     "pwdlib[argon2]>=0.3.1",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
@@ -22,7 +26,6 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "httpx>=0.28",
     "pytest>=8.3",
     "pytest-asyncio>=0.25",
 ]

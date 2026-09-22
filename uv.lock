@@ -606,6 +606,8 @@ dependencies = [
     { name = "celery", extra = ["redis"] },
     { name = "cryptography" },
     { name = "fastapi" },
+    { name = "httpx" },
+    { name = "kombu" },
     { name = "pwdlib", extra = ["argon2"] },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -618,7 +620,6 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
-    { name = "httpx" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
 ]
@@ -630,6 +631,8 @@ requires-dist = [
     { name = "celery", extras = ["redis"], specifier = ">=5.6.3" },
     { name = "cryptography", specifier = ">=44.0" },
     { name = "fastapi", specifier = ">=0.115" },
+    { name = "httpx", specifier = ">=0.28" },
+    { name = "kombu", specifier = ">=5.6" },
     { name = "pwdlib", extras = ["argon2"], specifier = ">=0.3.1" },
     { name = "pydantic", specifier = ">=2.9" },
     { name = "pydantic-settings", specifier = ">=2.6" },
@@ -642,7 +645,6 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "httpx", specifier = ">=0.28" },
     { name = "pytest", specifier = ">=8.3" },
     { name = "pytest-asyncio", specifier = ">=0.25" },
 ]
