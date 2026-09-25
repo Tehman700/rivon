@@ -103,7 +103,12 @@ async def complete_page_connection(
     Redeeming the state first is what stops a captured callback being replayed:
     everything after it is wasted work if the state is not ours and unused.
     """
-    await service.consume_oauth_state(session, tenant_id, state)
+    # Which button they pressed. It decides what silence means later: a Page
+    # with no Instagram attached is unremarkable to someone connecting
+    # Messenger, and the whole point of the exercise to someone who clicked
+    # Connect Instagram.
+    started = await service.consume_oauth_state(session, tenant_id, state)
+    wanted_instagram = started.provider is Channel.INSTAGRAM
 
     grant = await graph.exchange_code(code, redirect_uri=redirect_uri)
     granted = await graph.inspect_token(grant.access_token)
@@ -167,6 +172,14 @@ async def complete_page_connection(
             skipped.append(
                 (page.instagram_username or page.instagram_id,
                  "Instagram message access was not granted")
+            )
+        elif wanted_instagram:
+            # Nothing came back to connect. Saying so is the difference between
+            # a customer fixing their setup and one who thinks it worked.
+            skipped.append(
+                (page.name or page.id,
+                 "no Instagram professional account is linked to this Page. Link one in "
+                 "Meta Business Suite, then connect again")
             )
 
     if not connected:

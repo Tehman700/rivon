@@ -262,6 +262,46 @@ async def test_instagram_is_left_out_when_its_permissions_were_not_granted(
     assert outcome.skipped == (("berlinsolar", "Instagram message access was not granted"),)
 
 
+async def test_a_page_with_no_instagram_says_so_when_instagram_was_the_point(
+    db_session: AsyncSession, seed: Seed, graph: MetaGraph, meta: FakeMeta, cipher: TokenCipher
+) -> None:
+    """The quiet failure: connect succeeds, and Instagram is simply absent.
+
+    Meta returns the Page with no Instagram account when none is linked to it.
+    Without this the customer is told "1 account connected" and has no way to
+    tell that the thing they came for did not happen.
+    """
+    meta.pages = [{"id": meta.page_id, "name": "Berlin Solar", "access_token": "PAGE-TOKEN-1"}]
+    await set_current_tenant(db_session, seed.tenant_a.id)
+
+    url = await oauth.begin_page_connection(
+        db_session, seed.tenant_a.id, Channel.INSTAGRAM, graph=graph,
+        config_id="test-config-pages", redirect_uri=REDIRECT,
+    )
+    outcome = await oauth.complete_page_connection(
+        db_session, seed.tenant_a.id, code="a-code", state=state_from(url), graph=graph,
+        redirect_uri=REDIRECT, cipher=cipher,
+    )
+
+    assert [c.provider for c in outcome.connected] == [Channel.MESSENGER]
+    [(account, reason)] = outcome.skipped
+    assert account == "Berlin Solar"
+    assert "no Instagram professional account is linked" in reason
+
+
+async def test_connecting_messenger_does_not_nag_about_instagram(
+    db_session: AsyncSession, seed: Seed, graph: MetaGraph, meta: FakeMeta, cipher: TokenCipher
+) -> None:
+    # Plenty of installers have no Instagram and do not want to hear about it.
+    meta.pages = [{"id": meta.page_id, "name": "Berlin Solar", "access_token": "PAGE-TOKEN-1"}]
+    await set_current_tenant(db_session, seed.tenant_a.id)
+
+    outcome = await run_flow(db_session, seed.tenant_a.id, graph, cipher)
+
+    assert [c.provider for c in outcome.connected] == [Channel.MESSENGER]
+    assert outcome.skipped == ()
+
+
 async def test_no_page_shared_is_explained_not_swallowed(
     db_session: AsyncSession, seed: Seed, graph: MetaGraph, meta: FakeMeta, cipher: TokenCipher
 ) -> None:
