@@ -68,7 +68,9 @@ the Page.
 A tenant called *Rivon Test Solar* with owner `test@tideover.site` exists in
 production for end-to-end checks. It has a real Page connected.
 
-**Delete it before showing the product to anyone real.** When the Meta app goes
+A second test tenant, *Friend Test Solar* (owner `friend@tideover.site`, slug `friend-test`), was created on 25 Sep so a teammate can connect their own Page without it landing in the first tenant. `tideover.site` has no mailboxes, so password resets for these print to the server log.
+
+**Delete both before showing the product to anyone real.** When the Meta app goes
 Live, content created in development mode becomes visible to everyone.
 
 ---

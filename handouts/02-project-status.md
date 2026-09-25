@@ -88,7 +88,7 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | **Rotate the OpenAI API key** | It was pasted into a chat; treat it as exposed before Phase 2 uses it |
 | **Replace the root AWS access keys** with the `rivon-deployer` IAM user | Root keys should not be on a laptop |
 | Decide which EU country launches first | Spec §15.12: decides whether web widget + email outrank WhatsApp |
-| Delete the production test tenant before showing anyone real | It holds test data and a real Page connection |
+| Delete the production test tenants (*Rivon Test Solar*, *Friend Test Solar*) before showing anyone real | They hold test data and real Page connections |
 
 ### Waiting on code
 
