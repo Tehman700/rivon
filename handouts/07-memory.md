@@ -49,6 +49,8 @@ These identifiers are not secret — they appear in every login URL.
 | Login configuration — WhatsApp Embedded Signup | `1050395724554089` |
 | Products added | Messenger, Instagram, WhatsApp, Webhooks, Facebook Login for Business |
 | Redirect URI | `https://app.tideover.site/connect/meta/callback` — exact, no trailing slash |
+| Beta redirect URI | `https://app.tideover.site/connect/meta/beta` — must also be in *Valid OAuth redirect URIs* |
+| Beta login configuration | Must be the **User access token** type; its id goes in `RIVON_META_LOGIN_CONFIG_PAGES_V2` |
 | Privacy policy URL | `https://app.tideover.site/privacy` |
 | Data deletion URL | `https://app.tideover.site/data-deletion` |
 | Graph API version | `v25.0`, pinned |
@@ -137,6 +139,8 @@ required"*. The return screen now says so plainly.
 | **Embedded Signup takes the number off WhatsApp** | A registered number stops working in the WhatsApp and WhatsApp Business apps. | Use a spare number. Save the PIN shown once. |
 | **The 24-hour window** | Free-form replies only within 24 hours of the customer's last message. | Later messages (quotations) need an approved WhatsApp template or a Messenger tag. |
 | **Embedded Signup v2 is deprecated 15 Oct 2026** | | We build against v4. |
+| **Nobody can create a Page through the API** | ManyChat's "Create new Page" is a link to `facebook.com/pages/create`. | Send them there and refresh when they come back — the beta does. |
+| **A business token cannot see Pages created later** | It covers only the assets ticked in the dialog. | The beta uses a user token, which lists every Page the person manages. |
 | **ManyChat's dialog looks different** | They use the old consumer login, grandfathered. | New business apps must use Facebook Login for Business. |
 
 ---

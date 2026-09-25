@@ -1,6 +1,6 @@
 # Project status
 
-**As of 25 September 2026 — commit `cf98ef1` — 409 tests passing.**
+**As of 25 September 2026 — commit `cf08ca1` — 433 tests passing.**
 
 Update this file every time a feature lands. If the date above is more than a
 week old, treat everything below as suspect until checked.
@@ -39,6 +39,7 @@ Verified against the live system, not just in tests.
 | Instagram: connect | ✅ Connected | `rivonna.ai` linked to *Tehman's Market*, 25 Sep |
 | Instagram: receive → reply | 🟡 Awaiting a live DM | Same code path as Messenger; needs a message from an account with a role on the app |
 | WhatsApp | 🟡 **Built, awaiting first live signup** | Button and backend deployed; needs the server pulled to `cf98ef1` and a spare number |
+| **Beta: connect by choosing a Page** (`/channels/beta`) | 🟡 **Built, awaiting its Meta configuration** | The ManyChat round trip — see [`09-channels-meta.md`](09-channels-meta.md) §6a |
 | Lead qualification, feasibility, quotes | ❌ Not built | Phase 2 onwards |
 
 ---
@@ -69,7 +70,7 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | Dashboard | `https://app.tideover.site` — Vercel `fra1` |
 | API | `https://api.tideover.site` — EC2 `eu-central-1`, Docker Compose, Caddy |
 | Database | Neon Postgres, Frankfurt — migrations at **0012** |
-| Code on the server | Must be `cf98ef1` or later for WhatsApp |
+| Code on the server | Must be `cf08ca1` or later for WhatsApp and the beta flow; migrations to **0013** |
 | Meta app | **Rivon**, App ID `1027179017015673`, Business type, **Development mode** |
 | Connected accounts | 2 — Messenger (*Tehman's Market*) and Instagram (`rivonna.ai`), under the test tenant |
 
@@ -81,7 +82,9 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 
 | Item | Why it matters |
 |---|---|
-| Pull `cf98ef1` on the server and rebuild | WhatsApp needs the new `/channels/whatsapp/start` endpoint |
+| Pull `cf08ca1` on the server and rebuild | WhatsApp and the beta flow need it; runs migration 0013 |
+| Create the beta's login configuration (**User access token** type) and add `/connect/meta/beta` as a redirect URI | The beta flow answers 503 until then |
+| Try the beta, then decide: merge it, replace the old flow, or drop it | It was built to be judged side by side |
 | A spare phone number for WhatsApp | Embedded Signup registers a real number |
 | **Rotate the OpenAI API key** | It was pasted into a chat; treat it as exposed before Phase 2 uses it |
 | **Replace the root AWS access keys** with the `rivon-deployer` IAM user | Root keys should not be on a laptop |

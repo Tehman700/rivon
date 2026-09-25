@@ -16,6 +16,8 @@ everything else hangs off it.
 |---|---|---|---|
 | Instagram live test | DM `rivonna.ai` from another account with a role on the app; confirm the reply | — | **You** |
 | WhatsApp live test | Built and deployed (`cf98ef1`). Pull on the server, connect a spare number, message it | — | **You** |
+| **Beta connect flow** | Built (`cf08ca1`). Needs its login configuration and redirect URI, then a live try — and then a decision: merge, replace the old flow, or drop | — | **You**, then a decision |
+| Revoked rows block other businesses | The global unique index on `(provider, external_id)` also covers *revoked* connections, so a Page one business disconnected can never be connected by another. Found while building the beta. Fix: make the index partial (`WHERE status <> 'revoked'`) — a migration plus a test | S | Before real tenants |
 | Meta callbacks | Automated **deauthorize** and **data-deletion** callbacks (signed requests). Today we have the instructions page, which is enough for development mode. | ~1 day | Before going Live |
 | CHN-06 | WhatsApp templates — needed to message a customer outside the 24-hour window, e.g. to send a quotation days later. Templates take Meta days to approve, so submit early. | M | QUOT-05 |
 | CHN-08 | Per-channel health check and auth-failure alerting | M | Not FYP |

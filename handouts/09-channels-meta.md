@@ -129,6 +129,7 @@ says so.
 | `rivon/channels/outbound.py` | The dispatcher |
 | `rivon/channels/echo.py` | The placeholder reply — replaced by the conversation engine |
 | `rivon/channels/api.py` | The dashboard's endpoints |
+| `rivon/channels/picker.py`, `api_v2.py` | Beta: the Page picker flow and its endpoints |
 | `web/src/app/(app)/channels/` | The Channels page; `whatsapp-connect.tsx` is Embedded Signup in the browser |
 | `web/src/app/connect/meta/callback/` | Where Meta returns the customer |
 
@@ -140,6 +141,7 @@ says so.
 | `channel_oauth_states` | Single-use `state` values for the connect flow |
 | `inbound_messages` | What customers sent, exactly as it arrived; unique per provider message id |
 | `outbound_messages` | What we intend to say, claimed before sending; unique per dedupe key |
+| `channel_picker_sessions` | Beta: a customer choosing a Page; sealed user token, 30-minute life (migration 0013) |
 
 ---
 
@@ -188,6 +190,43 @@ consent screen and breaks the flow for everyone.
 
 ---
 
+## 6a. Beta: connect by choosing a Page
+
+A second connect flow, beside the current one, built to match ManyChat:
+
+```
+Continue with Facebook ──► Meta dialog (user-token configuration)
+        │
+        ▼
+/connect/meta/beta ──► POST /channels/v2/callback   exchange, extend to long-lived, check permissions,
+        │                                           open a 30-minute session (token sealed)
+        ▼
+/channels/beta?session=… ──► GET  /channels/v2/sessions/{id}/pages     every Page they manage, with status
+        │                     (again on Refresh, and when the tab regains focus)
+        │
+        ├─ none? ──► "Create a Page on Facebook" (new tab) ──► come back ──► list refreshes
+        │
+        └─ Connect ──► POST /channels/v2/sessions/{id}/connect   subscribe that Page, store it (+ Instagram)
+                       DELETE /channels/v2/sessions/{id}          on Done: destroy the user token
+```
+
+| | Current flow | Beta |
+|---|---|---|
+| Token | Business integration | User, long-lived, held only while choosing |
+| Needs a business portfolio | Yes | No |
+| Page created after sign-in | Invisible | Appears on refresh |
+| Who chooses | Meta's dialog | Rivon's list, one Connect per Page |
+| Endpoints / pages | `/channels/…`, `/channels` | `/channels/v2/…`, `/channels/beta` |
+
+Each Page is shown as *available*, *connected* (to this business) or *taken*
+(another business — never which). The Page id the browser sends is trusted only
+if Meta lists it for that person.
+
+**To switch it on:** create a Facebook Login for Business configuration of the
+**User access token** type with the same permissions as the Pages configuration,
+add `https://app.tideover.site/connect/meta/beta` to *Valid OAuth redirect URIs*,
+and set `RIVON_META_LOGIN_CONFIG_PAGES_V2` on the server.
+
 ## 7. Configuration
 
 | Setting | Secret | Purpose |
@@ -199,6 +238,8 @@ consent screen and breaks the flow for everyone.
 | `RIVON_META_LOGIN_CONFIG_PAGES` | No | Configuration id for Pages + Instagram |
 | `RIVON_META_LOGIN_CONFIG_WHATSAPP` | No | Configuration id for Embedded Signup |
 | `RIVON_META_REDIRECT_URI` | No | Must match the App Dashboard exactly |
+| `RIVON_META_LOGIN_CONFIG_PAGES_V2` | No | Beta: the user-token configuration id |
+| `RIVON_META_REDIRECT_URI_V2` | No | Beta: defaults to `…/connect/meta/beta` |
 | `RIVON_CHANNEL_TOKEN_KEY` | **Yes** | Encrypts customers' tokens; different in every environment |
 
 Note what is absent: no Page id, no phone number, no customer token. Those are

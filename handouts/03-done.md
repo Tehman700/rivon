@@ -5,8 +5,8 @@ Everything built so far, grouped by module and feature ID from
 trustworthy, and the commit that introduced it — `git show <hash>` explains the
 reasoning in full, because commit messages here are written to be read.
 
-**Totals at `cf98ef1`:** 39 commits · 12 migrations · 18 tables · 28 API routes ·
-18 web pages · 409 tests.
+**Totals at `cf08ca1`:** 42 commits · 13 migrations · 19 tables · 33 API routes ·
+20 web pages · 433 tests.
 
 Legend: ✅ complete · 🟡 partial (what is missing is stated)
 
@@ -57,6 +57,7 @@ The whole transport layer for WhatsApp, Messenger and Instagram.
 | CHN-05 | ✅ | Outbound dispatcher: claims each send by a dedupe key in the database, sends through the right adapter, tells a dead token or a closed 24-hour window apart from a retryable failure, gives up after five attempts, and keeps the reason on the row. | `21502c9` |
 | CHN-07 | ✅ | Connected accounts, with access tokens **encrypted** (Fernet) before they reach the database; revocation, re-authorisation status, and reconnecting in place. | `067d058` |
 | CHN-13 | ✅ | *New feature, not in the original list.* Self-serve connection, the ManyChat model: Facebook Login for Business for Pages and Instagram, WhatsApp Embedded Signup for WhatsApp — backend and the browser half (Facebook's JS SDK popup, pairing the code with the account ids from the browser event). Checks the permissions actually granted, subscribes each account before storing it, and explains anything it had to leave out. | `f930aa4`, `ab865b4`, `946b757`, `cf98ef1` |
+| CHN-13 (beta) | ✅ | **Connect by choosing a Page**, the ManyChat round trip, beside the current flow under `/channels/v2` and `/channels/beta`. Logs in with a user token, lists every Page the person manages, sends them to Facebook to create one if there is none and refreshes when they come back, connects only the Page they press Connect on. The user token is sealed, held 30 minutes at most, destroyed on close, never sent to the browser. | `cf08ca1` |
 | — | ✅ | A placeholder **echo reply** so the path can be watched working. Identifies itself as an automated assistant. Replaced by the conversation engine in Phase 2. | `21502c9` |
 
 ## Dashboard and site — `web/`

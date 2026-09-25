@@ -145,6 +145,17 @@ The stack list in `CLAUDE.md` did not include these. None is on the forbidden li
 | `kombu` | Already installed through Celery; now declared because the worker imports it directly | Declared, not new |
 | `lucide-react` icons only | Brand icons (Facebook, Instagram, WhatsApp) were removed upstream, so we draw them inline | — |
 
+## 14a. A second connect flow, in beta, beside the first
+
+| | |
+|---|---|
+| **Current flow** | Facebook Login for Business with a **business** token. Meta's dialog picks the assets; everything ticked is connected. |
+| **The gap** | It needs a Meta business portfolio, and a Page created after the dialog is invisible. A brand-new installer usually has neither a portfolio nor a Page — the two walls where people give up. ManyChat avoids both. |
+| **Beta flow** | A **user** token and Rivon's own Page picker: every Page the person manages, an empty state that sends them to Facebook to create one, a list that refreshes when they come back, and Connect per Page. |
+| **Why run both** | So the new flow can be tried with real accounts in production without risking the one that already works. Separate endpoints (`/channels/v2`), separate pages (`/channels/beta`), a separate login configuration and redirect URI. Only the storage they end in is shared. |
+| **What cannot be done by anyone** | Creating the Page. Meta has no API for it — ManyChat's "Create new Page" is a link to Facebook. |
+| **Decision pending** | After a live try: merge, replace the old flow, or drop. Recorded in `06-decisions.md` when made. |
+
 ## 14. Visual design
 
 | | |

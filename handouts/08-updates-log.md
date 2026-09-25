@@ -7,6 +7,8 @@ What happened, day by day. Newest first. Each entry names the commits, so
 
 ## 25 September 2026
 
+**Beta connect flow built** — the ManyChat round trip, beside the current flow: sign in, see your Pages on a Rivon screen, create one on Facebook if there is none, come back, Connect. Uses a user token so it needs no business portfolio and sees Pages created later. Found on the way: the global unique index also covers revoked connections, so a Page one business disconnected cannot be taken up by another — logged in `04-remaining.md`. (`cf08ca1`)
+
 **Messenger works end to end in production.** A real message sent to the
 *Tehman's Market* Page received the automated reply through the full path:
 signed webhook → tenant routing → stored → outbox → worker → outbound dispatcher

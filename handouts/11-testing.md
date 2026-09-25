@@ -2,7 +2,7 @@
 
 How Rivon is tested, and why the tests look the way they do.
 
-**409 tests** at `cf98ef1`. All run against a real Postgres, as the real
+**433 tests** at `cf08ca1`. All run against a real Postgres, as the real
 application role, with row-level security in force.
 
 ---
@@ -110,6 +110,7 @@ outbox relay, and the channel routing function — each with its reason.
 | `test_channel_connections.py` | 33 | Connections, encryption, routing, OAuth state |
 | `test_channel_connect.py` | 30 | The Messenger and Instagram connect flow |
 | `test_whatsapp_signup.py` | 30 | Embedded Signup |
+| `test_channel_picker.py` | 24 | Beta: the Page picker — including a Page created after sign-in appearing on refresh |
 | `test_auth.py` | 21 | Sign-in, refresh rotation, password reset |
 | `test_outbound.py` | 20 | The dispatcher and the echo |
 | `test_tenant_isolation.py` | 13 | Cross-tenant access |

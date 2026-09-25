@@ -115,6 +115,16 @@ what would make us revisit it.
 - **Options:** Build the App ID and configuration id into the frontend; ask the API.
 - **Choice:** `POST /channels/whatsapp/start`, owner only. One place says which app and configuration a deployment uses, and changing it needs no frontend redeploy.
 
+### D-27 · 25 Sep 2026 · Build the ManyChat-style connect as a separate beta, not a change
+- **Choice:** New endpoints and pages beside the current flow; nothing in the current flow changes.
+- **Why:** The current flow works in production. The new one can be judged with real accounts first, then merged in, swapped in, or dropped.
+- **Revisit:** After the live try — this entry will be superseded by the outcome.
+
+### D-28 · 25 Sep 2026 · The beta logs in with a user token
+- **Options:** Business integration token (current); user token.
+- **Choice:** User token, traded for a long-lived one, sealed, held 30 minutes at most, destroyed when the session closes.
+- **Why:** It can list every Page the person manages, including ones created after sign-in, and needs no business portfolio. Page tokens read with a long-lived user token do not expire, so what is stored afterwards is no weaker than today.
+
 ---
 
 ## Engineering practice

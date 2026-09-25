@@ -51,6 +51,7 @@ RIVON_JWT_SECRET             RIVON_PUBLIC_APP_URL            RIVON_API_DOMAIN
 RIVON_CHANNEL_TOKEN_KEY      RIVON_META_APP_ID               RIVON_META_APP_SECRET
 RIVON_META_VERIFY_TOKEN      RIVON_META_LOGIN_CONFIG_PAGES   RIVON_META_REDIRECT_URI
 RIVON_META_LOGIN_CONFIG_WHATSAPP   (the API starts without it; WhatsApp answers 503)
+RIVON_META_LOGIN_CONFIG_PAGES_V2   (beta; the /channels/v2 endpoints answer 503 without it)
 ```
 
 `docker-compose.prod.yml` marks these **required**: a missing one fails the
@@ -107,7 +108,7 @@ only the server steps.
 - Every schema change is a new numbered migration. **Never edit one that has run.**
 - Every migration must downgrade cleanly — the test suite runs up, down, up on every run.
 - Migrations must not import application code, so they keep meaning what they meant.
-- Current head: **0012**.
+- Current head: **0013**.
 
 ---
 
@@ -166,6 +167,9 @@ containers and separate logs.
 | `giving up on reply` in the worker | Meta refused the send; the line says why |
 | Channels page says *Needs reconnecting* | The customer revoked access at Meta, or the token died |
 | Instagram "connects" but is not listed | The Page has no Instagram professional account linked |
+| Beta page: "not configured" | `RIVON_META_LOGIN_CONFIG_PAGES_V2` missing from `.env` |
+| Beta: blank Facebook error after Continue | `/connect/meta/beta` is not in *Valid OAuth redirect URIs* |
+| Beta: "This connection window has closed" | The 30-minute session expired, or Done was pressed — start again |
 | WhatsApp dialog: "Not Found" | The API is older than `cf98ef1` — pull and rebuild |
 | WhatsApp dialog: "not configured" | `RIVON_META_LOGIN_CONFIG_WHATSAPP` missing from `.env` |
 | WhatsApp dialog: "Facebook could not be reached" | An ad blocker stopped Facebook's SDK |

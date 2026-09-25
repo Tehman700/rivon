@@ -8,7 +8,7 @@ list as they were written before building started. These handouts are the
 When the two disagree, these are the more recent truth, and
 [`05-design-deviations.md`](05-design-deviations.md) says exactly where and why.
 
-Last updated: **25 September 2026**, at commit `cf98ef1`.
+Last updated: **25 September 2026**, at commit `cf08ca1`.
 
 ---
 

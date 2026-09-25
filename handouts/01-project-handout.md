@@ -191,7 +191,7 @@ automated assistant, so nothing misleading reaches a person even in testing.
 
 ```
 docker compose up -d              # Postgres, Redis, migrations, API, worker, relay
-uv run pytest -q                  # 409 tests against a real Postgres
+uv run pytest -q                  # 433 tests against a real Postgres
 cd web && npm install && npm run dev
 ```
 
