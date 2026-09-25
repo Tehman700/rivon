@@ -50,7 +50,7 @@ These identifiers are not secret — they appear in every login URL.
 | Products added | Messenger, Instagram, WhatsApp, Webhooks, Facebook Login for Business |
 | Redirect URI | `https://app.tideover.site/connect/meta/callback` — exact, no trailing slash |
 | Beta redirect URI | `https://app.tideover.site/connect/meta/beta` — must also be in *Valid OAuth redirect URIs* |
-| Beta login configuration | Must be the **User access token** type; its id goes in `RIVON_META_LOGIN_CONFIG_PAGES_V2` |
+| Login configuration — beta Page picker | `1511011547713333` — **User access token** type; set as `RIVON_META_LOGIN_CONFIG_PAGES_V2` |
 | Privacy policy URL | `https://app.tideover.site/privacy` |
 | Data deletion URL | `https://app.tideover.site/data-deletion` |
 | Graph API version | `v25.0`, pinned |

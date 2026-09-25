@@ -39,7 +39,7 @@ Verified against the live system, not just in tests.
 | Instagram: connect | ✅ Connected | `rivonna.ai` linked to *Tehman's Market*, 25 Sep |
 | Instagram: receive → reply | 🟡 Awaiting a live DM | Same code path as Messenger; needs a message from an account with a role on the app |
 | WhatsApp | 🟡 **Built, awaiting first live signup** | Button and backend deployed; needs the server pulled to `cf98ef1` and a spare number |
-| **Beta: connect by choosing a Page** (`/channels/beta`) | 🟡 **Built, awaiting its Meta configuration** | The ManyChat round trip — see [`09-channels-meta.md`](09-channels-meta.md) §6a |
+| **Beta: connect by choosing a Page** (`/channels/beta`) | 🟡 **Live, awaiting its first real try** | The ManyChat round trip — see [`09-channels-meta.md`](09-channels-meta.md) §6a |
 | Lead qualification, feasibility, quotes | ❌ Not built | Phase 2 onwards |
 
 ---
@@ -83,7 +83,6 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | Item | Why it matters |
 |---|---|
 | Pull `cf08ca1` on the server and rebuild | WhatsApp and the beta flow need it; runs migration 0013 |
-| Create the beta's login configuration (**User access token** type) and add `/connect/meta/beta` as a redirect URI | The beta flow answers 503 until then |
 | Try the beta, then decide: merge it, replace the old flow, or drop it | It was built to be judged side by side |
 | A spare phone number for WhatsApp | Embedded Signup registers a real number |
 | **Rotate the OpenAI API key** | It was pasted into a chat; treat it as exposed before Phase 2 uses it |
