@@ -150,22 +150,21 @@ class MetaGraph:
 
     # --- Credentials ---------------------------------------------------------
 
-    async def exchange_code(self, code: str, *, redirect_uri: str) -> TokenGrant:
+    async def exchange_code(self, code: str, *, redirect_uri: str | None) -> TokenGrant:
         """Trade the callback's code for the customer's own token.
 
         Server to server, with the app secret. On WhatsApp's Embedded Signup
         this code lives 30 seconds, so nothing may sit between the callback and
         this call.
+
+        A code from a redirect must be exchanged with that exact redirect URI. A
+        code from the JavaScript SDK (Embedded Signup) never had one, and must be
+        exchanged without — sending an empty value makes Meta reject it.
         """
-        payload = await self._get(
-            "oauth/access_token",
-            {
-                "client_id": self.app_id,
-                "client_secret": self._app_secret,
-                "redirect_uri": redirect_uri,
-                "code": code,
-            },
-        )
+        params = {"client_id": self.app_id, "client_secret": self._app_secret, "code": code}
+        if redirect_uri:
+            params["redirect_uri"] = redirect_uri
+        payload = await self._get("oauth/access_token", params)
         token = payload.get("access_token")
         if not token:
             raise MetaApiError("Meta returned no access token for that code")

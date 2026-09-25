@@ -76,3 +76,18 @@ class WhatsAppConnectedOut(BaseModel):
     connection: ConnectionOut
     #: Shown once and never stored. Null when the customer supplied their own.
     registration_pin: str | None
+
+
+class WhatsAppStartOut(BaseModel):
+    """What the browser needs to open Embedded Signup.
+
+    None of it is secret — it all appears in Meta's own dialog — but it comes
+    from the server so there is one place that says which app and configuration
+    this deployment uses.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    app_id: str
+    config_id: str
+    graph_version: str

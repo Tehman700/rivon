@@ -325,7 +325,9 @@ async def complete_whatsapp_signup(
     The code has a thirty-second life, so this is called immediately and does
     the exchange first. Everything else can be retried; that cannot.
     """
-    grant = await graph.exchange_code(code, redirect_uri="")
+    # The code came from the JavaScript SDK, not a redirect, so there is no
+    # redirect URI to match.
+    grant = await graph.exchange_code(code, redirect_uri=None)
     granted = await graph.inspect_token(grant.access_token)
     if not granted.is_valid:
         raise ConnectFailed("Meta says that authorisation is not valid. Please try again.")

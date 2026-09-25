@@ -28,6 +28,8 @@ import { Card } from "@/components/ui/card"
 import { ApiError, api } from "@/lib/api/client"
 import type { ChannelConnection, ChannelProvider, ConnectStart } from "@/lib/api/types"
 
+import { WhatsAppConnect } from "./whatsapp-connect"
+
 /** The three cards, in the order a solar installer is most likely to want them. */
 const PROVIDERS: {
   id: ChannelProvider
@@ -57,10 +59,10 @@ const PROVIDERS: {
   {
     id: "whatsapp",
     name: "WhatsApp",
-    description: "The channel most customers reach for first. Setup is being finished.",
+    description: "Answer the number your customers already message, from the WhatsApp Business Platform.",
     icon: WhatsAppIcon,
     tint: "bg-[#25d366]",
-    available: false,
+    available: true,
   },
 ]
 
@@ -162,7 +164,7 @@ export function ChannelsClient({
       // The server mints a single-use state and builds the dialog URL; we only
       // ever send the customer to it.
       const start = await api<ConnectStart>(`/channels/connect/${provider}`, { method: "POST" })
-      window.location.href = start.authorize_url
+      window.location.assign(start.authorize_url)
     } catch (error) {
       toast.error(error instanceof ApiError ? error.message : "Could not start the connection")
       setStarting(null)
@@ -196,7 +198,11 @@ export function ChannelsClient({
                 <p className="text-sm text-muted-foreground">{provider.description}</p>
               </div>
 
-              {canEdit && provider.available && (
+              {canEdit && provider.available && provider.id === "whatsapp" && (
+                // Embedded Signup: Facebook's popup, not a redirect.
+                <WhatsAppConnect hasNumbers={linked.length > 0} />
+              )}
+              {canEdit && provider.available && provider.id !== "whatsapp" && (
                 <Button
                   variant={linked.length ? "outline" : "default"}
                   onClick={() => connect(provider.id)}

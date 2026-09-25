@@ -17,6 +17,7 @@ from rivon.channels.schemas import (
     SkippedOut,
     WhatsAppConnectedOut,
     WhatsAppSignupIn,
+    WhatsAppStartOut,
 )
 from rivon.channels.service import ConnectionNotFound, OAuthStateInvalid
 from rivon.config import Settings, get_settings
@@ -127,6 +128,25 @@ async def finish_connect(
     return ConnectOutcomeOut(
         connected=[_out(row) for row in outcome.connected],
         skipped=[SkippedOut(account=account, reason=reason) for account, reason in outcome.skipped],
+    )
+
+
+@router.post("/whatsapp/start", response_model=WhatsAppStartOut)
+async def start_whatsapp_signup(tenant: Tenant, owner: Owner, settings: Config) -> WhatsAppStartOut:
+    """What the browser needs to open Embedded Signup.
+
+    A POST, owner only, so only someone allowed to connect a number learns
+    which configuration to open.
+    """
+    if not settings.meta_app_id or not settings.meta_login_config_whatsapp:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "WhatsApp is not configured on this deployment",
+        )
+    return WhatsAppStartOut(
+        app_id=settings.meta_app_id,
+        config_id=settings.meta_login_config_whatsapp,
+        graph_version=settings.meta_graph_version,
     )
 
 

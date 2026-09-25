@@ -194,3 +194,15 @@ export interface ConnectOutcome {
   connected: ChannelConnection[]
   skipped: { account: string; reason: string }[]
 }
+
+export interface WhatsAppStart {
+  app_id: string
+  config_id: string
+  graph_version: string
+}
+
+export interface WhatsAppConnected {
+  connection: ChannelConnection
+  /** Shown once, never stored. Null when the customer supplied their own. */
+  registration_pin: string | null
+}

@@ -139,6 +139,17 @@ async def test_the_code_is_exchanged_before_anything_else(
     assert meta.paths_called[0] == "oauth/access_token"
 
 
+async def test_an_sdk_code_is_exchanged_without_a_redirect_uri(
+    db_session: AsyncSession, seed: Seed, graph: MetaGraph, meta: FakeWhatsApp, cipher: TokenCipher
+) -> None:
+    # The code comes from the JavaScript SDK, not a redirect. Sending any
+    # redirect_uri — even an empty one — makes Meta refuse the exchange.
+    await set_current_tenant(db_session, seed.tenant_a.id)
+    await signup(db_session, seed.tenant_a.id, graph, meta, cipher)
+    exchange = next(body for _, path, body in meta.calls if path == "oauth/access_token")
+    assert "redirect_uri" not in exchange
+
+
 async def test_the_account_is_subscribed_and_the_number_registered(
     db_session: AsyncSession, seed: Seed, graph: MetaGraph, meta: FakeWhatsApp, cipher: TokenCipher
 ) -> None:
@@ -416,3 +427,24 @@ async def test_a_wrong_pin_is_explained_through_the_api(
     )
     assert response.status_code == 400
     assert "existing PIN" in response.json()["detail"]
+
+
+async def test_the_browser_is_told_which_configuration_to_open(
+    client: AsyncClient, tenant: TenantUsers
+) -> None:
+    response = await client.post("/channels/whatsapp/start", headers=tenant.owner)
+    assert response.status_code == 200
+    assert response.json() == {
+        "app_id": "test-app-id",
+        "config_id": "test-config-whatsapp",
+        "graph_version": "v25.0",
+    }
+    assert "secret" not in response.text
+
+
+async def test_only_the_owner_can_start_whatsapp_signup(
+    client: AsyncClient, tenant: TenantUsers
+) -> None:
+    for headers in (tenant.manager, tenant.agent):
+        assert (await client.post("/channels/whatsapp/start", headers=headers)).status_code == 403
+    assert (await client.post("/channels/whatsapp/start")).status_code == 401
