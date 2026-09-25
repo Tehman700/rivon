@@ -52,7 +52,8 @@ These identifiers are not secret — they appear in every login URL.
 | Privacy policy URL | `https://app.tideover.site/privacy` |
 | Data deletion URL | `https://app.tideover.site/data-deletion` |
 | Graph API version | `v25.0`, pinned |
-| Connected in production | Messenger → *Tehman's Market*, Page id `1393807600471063`, under the test tenant |
+| Connected in production | Messenger → *Tehman's Market*, Page id `1393807600471063`; Instagram → `rivonna.ai`; both under the test tenant |
+| Facebook Login for Business settings | *Login with the JavaScript SDK* **on**, `app.tideover.site` in *Allowed domains* — WhatsApp's popup will not open otherwise |
 
 The credentials file also holds an **Instagram App ID and secret**. We do not use
 them — they belong to Instagram's own login, and we connect Instagram through
@@ -130,7 +131,10 @@ required"*. The return screen now says so plainly.
 | **`pages_manage_metadata` unticked** | The connect looks fine and the Page never receives anything, because it cannot be subscribed. | We refuse the connect if it is missing. |
 | **Our own replies come back** | Meta echoes outbound messages to the webhook with `is_echo`. | Ignored by the adapter — otherwise the bot answers itself forever. |
 | **The Embedded Signup code lives 30 seconds** | Anything between the callback and the exchange risks losing it. | Exchange first, always. |
-| **WhatsApp ids arrive by browser event** | `waba_id` and `phone_number_id` are not in the redirect. | The page must listen for `WA_EMBEDDED_SIGNUP`. |
+| **WhatsApp ids arrive by browser event** | `waba_id` and `phone_number_id` are not in the redirect, and may arrive before or after the code. | The page pairs the two halves and times out naming the missing one. |
+| **SDK codes have no redirect URI** | A code from the JavaScript SDK must be exchanged with **no** `redirect_uri` parameter. An empty one is refused. | `exchange_code(..., redirect_uri=None)` for Embedded Signup. |
+| **Popups need a direct click** | Browsers block a popup that follows an `await`. | Load the SDK when the dialog opens; call `FB.login` synchronously on the click. |
+| **Embedded Signup takes the number off WhatsApp** | A registered number stops working in the WhatsApp and WhatsApp Business apps. | Use a spare number. Save the PIN shown once. |
 | **The 24-hour window** | Free-form replies only within 24 hours of the customer's last message. | Later messages (quotations) need an approved WhatsApp template or a Messenger tag. |
 | **Embedded Signup v2 is deprecated 15 Oct 2026** | | We build against v4. |
 | **ManyChat's dialog looks different** | They use the old consumer login, grandfathered. | New business apps must use Facebook Login for Business. |

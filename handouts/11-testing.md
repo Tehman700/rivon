@@ -2,7 +2,7 @@
 
 How Rivon is tested, and why the tests look the way they do.
 
-**406 tests** at `946b757`. All run against a real Postgres, as the real
+**409 tests** at `cf98ef1`. All run against a real Postgres, as the real
 application role, with row-level security in force.
 
 ---
@@ -109,7 +109,7 @@ outbox relay, and the channel routing function — each with its reason.
 | `test_verticals.py` | 34 | The solar question set and sizing |
 | `test_channel_connections.py` | 33 | Connections, encryption, routing, OAuth state |
 | `test_channel_connect.py` | 30 | The Messenger and Instagram connect flow |
-| `test_whatsapp_signup.py` | 27 | Embedded Signup |
+| `test_whatsapp_signup.py` | 30 | Embedded Signup |
 | `test_auth.py` | 21 | Sign-in, refresh rotation, password reset |
 | `test_outbound.py` | 20 | The dispatcher and the echo |
 | `test_tenant_isolation.py` | 13 | Cross-tenant access |
@@ -138,6 +138,6 @@ outbox relay, and the channel routing function — each with its reason.
 | | |
 |---|---|
 | The dashboard's own code | There is no frontend test runner. The dashboard is verified through its API and by hand. |
-| The WhatsApp button | Not built yet. When it is, the browser half — SDK, event listener, 30-second exchange — is where a browser test earns its place. |
+| The WhatsApp button | Built, but only its API is tested. The browser half — SDK loading, pairing the code with the session event, the 30-second window — is verified by hand. This is where a browser test would earn its place. |
 | A restore from backup | Never attempted. |
 | Load | Not attempted. The webhook path is built to be fast, but nobody has measured it. |

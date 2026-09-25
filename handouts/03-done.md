@@ -56,7 +56,7 @@ The whole transport layer for WhatsApp, Messenger and Instagram.
 | CHN-04 | ✅ | Idempotency: unique `(tenant_id, provider_message_id)`; a retried delivery is stored and enqueued once. | `b5c28db` |
 | CHN-05 | ✅ | Outbound dispatcher: claims each send by a dedupe key in the database, sends through the right adapter, tells a dead token or a closed 24-hour window apart from a retryable failure, gives up after five attempts, and keeps the reason on the row. | `21502c9` |
 | CHN-07 | ✅ | Connected accounts, with access tokens **encrypted** (Fernet) before they reach the database; revocation, re-authorisation status, and reconnecting in place. | `067d058` |
-| CHN-13 | ✅ | *New feature, not in the original list.* Self-serve connection, the ManyChat model: Facebook Login for Business for Pages and Instagram, WhatsApp Embedded Signup for WhatsApp. Checks the permissions actually granted, subscribes each account before storing it, and explains anything it had to leave out. | `f930aa4`, `ab865b4`, `946b757`, `cf98ef1` |
+| CHN-13 | ✅ | *New feature, not in the original list.* Self-serve connection, the ManyChat model: Facebook Login for Business for Pages and Instagram, WhatsApp Embedded Signup for WhatsApp — backend and the browser half (Facebook's JS SDK popup, pairing the code with the account ids from the browser event). Checks the permissions actually granted, subscribes each account before storing it, and explains anything it had to leave out. | `f930aa4`, `ab865b4`, `946b757`, `cf98ef1` |
 | — | ✅ | A placeholder **echo reply** so the path can be watched working. Identifies itself as an automated assistant. Replaced by the conversation engine in Phase 2. | `21502c9` |
 
 ## Dashboard and site — `web/`

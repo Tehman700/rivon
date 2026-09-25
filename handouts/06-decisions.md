@@ -111,6 +111,10 @@ what would make us revisit it.
 ### D-21 · 25 Sep 2026 · Explain what was left out, based on the button pressed
 - **Choice:** If a customer pressed *Connect Instagram* and no Instagram account came back, say so and say how to fix it. If they pressed *Connect Facebook*, stay quiet about Instagram.
 
+### D-26 · 25 Sep 2026 · The server tells the browser which WhatsApp configuration to open
+- **Options:** Build the App ID and configuration id into the frontend; ask the API.
+- **Choice:** `POST /channels/whatsapp/start`, owner only. One place says which app and configuration a deployment uses, and changing it needs no frontend redeploy.
+
 ---
 
 ## Engineering practice

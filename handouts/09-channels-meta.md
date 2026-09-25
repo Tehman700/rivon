@@ -79,15 +79,20 @@ It refuses outright if `pages_messaging` or `pages_manage_metadata` is missing �
 without the second, a Page can never be subscribed and would silently receive
 nothing.
 
-### WhatsApp — Embedded Signup (backend done, button not yet)
+### WhatsApp — Embedded Signup
 
 Meta *creates* the customer's WhatsApp Business Account during the dialog, so
 the shape is different:
 
-1. The page calls `FB.login` through Facebook's JavaScript SDK with the WhatsApp configuration.
+1. When the dialog opens, the page asks `POST /channels/whatsapp/start` which app and
+   configuration to use, and loads Facebook's JavaScript SDK — so the click that
+   follows can open the popup straight away (browsers block popups after an `await`).
+   On the click, it calls `FB.login` with the WhatsApp configuration.
 2. The page listens for the browser `WA_EMBEDDED_SIGNUP` event, which carries
    `waba_id` and `phone_number_id` — they are **not** in the redirect.
-3. The code lives **30 seconds**; it goes straight to `/channels/whatsapp/complete`.
+3. The code arrives in `FB.login`'s callback, separately and in either order. The
+   page pairs the two halves; the code lives **30 seconds**, so they go straight to
+   `/channels/whatsapp/complete`. It is exchanged with **no** redirect URI — SDK codes never had one.
 4. The API exchanges it, checks permissions, subscribes the WhatsApp account,
    registers the number with a PIN, and stores the connection.
 
@@ -124,7 +129,7 @@ says so.
 | `rivon/channels/outbound.py` | The dispatcher |
 | `rivon/channels/echo.py` | The placeholder reply — replaced by the conversation engine |
 | `rivon/channels/api.py` | The dashboard's endpoints |
-| `web/src/app/(app)/channels/` | The Channels page |
+| `web/src/app/(app)/channels/` | The Channels page; `whatsapp-connect.tsx` is Embedded Signup in the browser |
 | `web/src/app/connect/meta/callback/` | Where Meta returns the customer |
 
 ### Tables (migrations 0010–0012)
@@ -143,10 +148,10 @@ says so.
 | Channel | Connect | Receive | Reply | Blocking |
 |---|---|---|---|---|
 | **Messenger** | ✅ | ✅ | ✅ | Nothing — working in production |
-| **Instagram** | ✅ code | ✅ code | ✅ code | An Instagram professional account must be linked to *Tehman's Market* |
-| **WhatsApp** | 🟡 backend only | ✅ code | ✅ code | The dashboard button (JS SDK + browser event) |
+| **Instagram** | ✅ `rivonna.ai` | ✅ code | ✅ code | A live DM from an account with a role on the app |
+| **WhatsApp** | ✅ built | ✅ code | ✅ code | Server pulled to `cf98ef1`, a spare number, and a first live signup |
 
-### To connect Instagram
+### Connecting Instagram (done once; kept for the next business)
 
 1. Meta Business Suite → *Tehman's Market* → Settings → Accounts → **Instagram accounts** → Add.
 2. The account must be **Business or Creator**, not personal.

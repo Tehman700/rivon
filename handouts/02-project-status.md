@@ -11,9 +11,11 @@ week old, treat everything below as suspect until checked.
 
 The foundations, the business configuration, and the **entire messaging
 transport layer** are built, tested and live in production in Frankfurt. A
-customer can message a connected Facebook Page and receive an automated reply,
-end to end, through signed webhooks, tenant routing, deduplication and an
-outbound dispatcher. What that reply *says* is still a placeholder: the
+business can connect its Facebook Page, Instagram account and WhatsApp number
+from the dashboard, and a customer who messages them receives an automated
+reply, end to end, through signed webhooks, tenant routing, deduplication and
+an outbound dispatcher. Messenger is proven with real messages; Instagram is
+connected; WhatsApp is built and waiting for its first live signup. What that reply *says* is still a placeholder: the
 conversation engine — the part that qualifies leads — is the next major piece
 and has not been started. Feasibility, quotations, lead scoring and analytics
 come after it.
@@ -35,6 +37,7 @@ Verified against the live system, not just in tests.
 | **Facebook Messenger: connect → receive → reply** | ✅ **Working** | A real message to *Tehman's Market* got the automated reply, 25 Sep |
 | Webhook security | ✅ Live | Handshake echoes on all three channels; unsigned, mis-signed and tampered posts refused |
 | Instagram: connect | ✅ Connected | `rivonna.ai` linked to *Tehman's Market*, 25 Sep |
+| Instagram: receive → reply | 🟡 Awaiting a live DM | Same code path as Messenger; needs a message from an account with a role on the app |
 | WhatsApp | 🟡 **Built, awaiting first live signup** | Button and backend deployed; needs the server pulled to `cf98ef1` and a spare number |
 | Lead qualification, feasibility, quotes | ❌ Not built | Phase 2 onwards |
 
@@ -52,7 +55,7 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | 2 | Fake channel + **conversation core** | 🟡 Fake channel done; conversation core **not started** |
 | 3 | Feasibility, then quotations | ❌ Not started |
 | 4 | Lead scoring | ❌ Not started |
-| 5 | Channel adapters | ✅ **Done early** — all three Meta channels, not just WhatsApp |
+| 5 | Channel adapters | ✅ **Done early** — all three Meta channels, connect flows and dashboard, not just WhatsApp |
 | 6 | Thin jobs + feedback (FYP only) | ❌ Not started |
 | 7 | Dashboard | 🟡 Built alongside each feature rather than at the end |
 | 8 | Polish, observability, demo | ❌ Not started |

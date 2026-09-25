@@ -50,6 +50,7 @@ RIVON_DATABASE_URL           RIVON_MIGRATION_DATABASE_URL    RIVON_RELAY_DATABAS
 RIVON_JWT_SECRET             RIVON_PUBLIC_APP_URL            RIVON_API_DOMAIN
 RIVON_CHANNEL_TOKEN_KEY      RIVON_META_APP_ID               RIVON_META_APP_SECRET
 RIVON_META_VERIFY_TOKEN      RIVON_META_LOGIN_CONFIG_PAGES   RIVON_META_REDIRECT_URI
+RIVON_META_LOGIN_CONFIG_WHATSAPP   (the API starts without it; WhatsApp answers 503)
 ```
 
 `docker-compose.prod.yml` marks these **required**: a missing one fails the
@@ -165,6 +166,12 @@ containers and separate logs.
 | `giving up on reply` in the worker | Meta refused the send; the line says why |
 | Channels page says *Needs reconnecting* | The customer revoked access at Meta, or the token died |
 | Instagram "connects" but is not listed | The Page has no Instagram professional account linked |
+| WhatsApp dialog: "Not Found" | The API is older than `cf98ef1` — pull and rebuild |
+| WhatsApp dialog: "not configured" | `RIVON_META_LOGIN_CONFIG_WHATSAPP` missing from `.env` |
+| WhatsApp dialog: "Facebook could not be reached" | An ad blocker stopped Facebook's SDK |
+| WhatsApp popup does not open, or errors at once | *Login with the JavaScript SDK* is off, or `app.tideover.site` is not an allowed domain |
+| WhatsApp dialog: "no phone number was added" | The account was created without a number — connect again and add one |
+| WhatsApp dialog asks for the existing PIN | The number already has two-step verification; enter its PIN before connecting |
 | `migrate` exits non-zero | The log names the failing step. Nothing else starts — on purpose |
 
 ---
