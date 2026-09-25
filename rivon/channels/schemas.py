@@ -91,3 +91,50 @@ class WhatsAppStartOut(BaseModel):
     app_id: str
     config_id: str
     graph_version: str
+
+
+# --- Beta: the Page picker ----------------------------------------------------
+
+
+class PickerSessionOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    session_id: uuid.UUID
+    expires_at: datetime
+
+
+class PickerInstagramOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    username: str | None
+
+
+class PickerPageOut(BaseModel):
+    """One Page the person manages. Never carries a token."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    name: str
+    instagram: PickerInstagramOut | None
+    #: "available", "connected" (to this business) or "taken" (another business).
+    messenger_status: str
+    instagram_status: str | None
+
+
+class PickerPagesOut(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    pages: list[PickerPageOut]
+    #: Where to send someone who has no Page yet.
+    create_page_url: str
+    expires_at: datetime
+
+
+class PickerConnectIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    page_id: str = Field(min_length=1, max_length=64)
+    #: Also connect the Instagram account linked to this Page, if there is one.
+    include_instagram: bool = True

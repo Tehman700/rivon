@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 from rivon.config import Settings, get_settings
 from rivon.business import api as business_api
 from rivon.channels import api as channels_api
+from rivon.channels import api_v2 as channels_api_v2
 from rivon.channels import webhooks as channel_webhooks
 from rivon.db import create_engine
 from rivon.platform import api as platform_api
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(platform_api.router)
     app.include_router(business_api.router)
     app.include_router(channels_api.router)
+    app.include_router(channels_api_v2.router)  # beta: the Page picker
     app.include_router(channel_webhooks.router)
     return app
 

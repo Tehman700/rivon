@@ -206,3 +206,28 @@ export interface WhatsAppConnected {
   /** Shown once, never stored. Null when the customer supplied their own. */
   registration_pin: string | null
 }
+
+// --- Beta: the Page picker (/channels/v2) ---
+
+export interface PickerSession {
+  session_id: string
+  expires_at: string
+}
+
+/** available · connected (to this business) · taken (another business). */
+export type PickerStatus = "available" | "connected" | "taken"
+
+export interface PickerPage {
+  id: string
+  name: string
+  instagram: { id: string; username: string | null } | null
+  messenger_status: PickerStatus
+  /** Null when there is no Instagram account, or its permissions were not granted. */
+  instagram_status: PickerStatus | null
+}
+
+export interface PickerPages {
+  pages: PickerPage[]
+  create_page_url: string
+  expires_at: string
+}

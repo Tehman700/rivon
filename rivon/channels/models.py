@@ -235,3 +235,29 @@ class OutboundMessageRecord(BaseMixin, TenantScopedMixin, Base):
     @property
     def is_deliverable(self) -> bool:
         return self.status is SendStatus.PENDING
+
+
+class ChannelPickerSession(BaseMixin, TenantScopedMixin, Base):
+    """A customer part-way through choosing which Page to connect (beta flow).
+
+    Holds the signed-in person's user token, encrypted, for as long as they are
+    choosing — including the minutes spent creating a new Page on Facebook and
+    coming back. It is not a connection and nothing is routed through it; the
+    token is destroyed when the session is closed or expires.
+    """
+
+    __tablename__ = "channel_picker_sessions"
+
+    user_token_encrypted: Mapped[bytes] = mapped_column(LargeBinary)
+    granted_scopes: Mapped[list[str]] = mapped_column(ARRAY(String(64)), default=list)
+    started_by_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), default=None
+    )
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+
+    @declared_attr.directive
+    def __table_args__(cls) -> tuple[Any, ...]:
+        return cls.tenant_table_args(
+            Index("ix_channel_picker_sessions_tenant_id_expires_at", "tenant_id", "expires_at"),
+        )

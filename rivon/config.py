@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     meta_login_config_whatsapp: str | None = None
     # Must match the App Dashboard exactly, trailing slash included.
     meta_redirect_uri: str = "http://localhost:3000/connect/meta/callback"
+    # The beta "choose your Page" flow (ManyChat-style). A separate login
+    # configuration of the *user access token* type, and its own redirect URI,
+    # so it can be tried in production without touching the current flow.
+    meta_login_config_pages_v2: str | None = None
+    meta_redirect_uri_v2: str = "http://localhost:3000/connect/meta/beta"
 
     # Where the dashboard lives; used to build links in emails.
     public_app_url: str = "http://localhost:3000"

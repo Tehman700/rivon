@@ -26,6 +26,9 @@ x-app-env: &app-env
   RIVON_META_LOGIN_CONFIG_PAGES: ${RIVON_META_LOGIN_CONFIG_PAGES:?}
   RIVON_META_LOGIN_CONFIG_WHATSAPP: ${RIVON_META_LOGIN_CONFIG_WHATSAPP:-}
   RIVON_META_REDIRECT_URI: ${RIVON_META_REDIRECT_URI:?}
+  # Beta Page picker; optional — its endpoints answer 503 without it.
+  RIVON_META_LOGIN_CONFIG_PAGES_V2: ${RIVON_META_LOGIN_CONFIG_PAGES_V2:-}
+  RIVON_META_REDIRECT_URI_V2: ${RIVON_META_REDIRECT_URI_V2:-https://app.tideover.site/connect/meta/beta}
 
 services:
   redis:

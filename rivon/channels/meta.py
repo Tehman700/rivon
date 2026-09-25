@@ -174,6 +174,32 @@ class MetaGraph:
             expires_at=_expiry(payload.get("expires_in")),
         )
 
+    async def extend_user_token(self, token: str) -> TokenGrant:
+        """Trade a short-lived user token (about an hour) for a long-lived one.
+
+        Used by the Page picker, which logs in with a *user* token rather than a
+        business one. It matters twice: the customer may go off to create a Page
+        and come back, and Page tokens read with a long-lived user token do not
+        expire, where ones read with a short-lived token die within the hour.
+        """
+        payload = await self._get(
+            "oauth/access_token",
+            {
+                "grant_type": "fb_exchange_token",
+                "client_id": self.app_id,
+                "client_secret": self._app_secret,
+                "fb_exchange_token": token,
+            },
+        )
+        extended = payload.get("access_token")
+        if not extended:
+            raise MetaApiError("Meta would not extend that sign-in")
+        return TokenGrant(
+            access_token=extended,
+            token_type=payload.get("token_type") or "user",
+            expires_at=_expiry(payload.get("expires_in")),
+        )
+
     async def inspect_token(self, token: str) -> TokenInfo:
         """What the customer actually granted.
 
