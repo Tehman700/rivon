@@ -91,7 +91,7 @@ true. Everything below has all three.
 | **Design said** | CHN-07: "channel credential storage (encrypted) + **token refresh**". |
 | **We did** | Instagram connects through its linked Facebook Page, on the Page's own long-lived business token. There is no refresh job. Instead, a connection whose token stops working moves to **needs reauth**, the dashboard says so, and the customer reconnects in one click. |
 | **Why** | Instagram's own login returns tokens that expire in 60 days and die permanently if unused for 60 days; the Page route avoids that treadmill entirely, and shares one code path with Messenger. |
-| **Trade-off** | The Instagram account must be a professional account linked to a Page. That is exactly what stopped the first Instagram connect — see [`07-memory.md`](07-memory.md). |
+| **Trade-off** | The Instagram account must be a professional account linked to a Page. That is exactly what stopped the first Instagram connect, until the account was linked to the Page on 25 Sep — see [`07-memory.md`](07-memory.md). |
 
 ## 8. Messages are stored in the channels module, for now
 

@@ -52,7 +52,7 @@ These identifiers are not secret — they appear in every login URL.
 | Privacy policy URL | `https://app.tideover.site/privacy` |
 | Data deletion URL | `https://app.tideover.site/data-deletion` |
 | Graph API version | `v25.0`, pinned |
-| Connected in production | Messenger → *Tehman's Market*, Page id `1393807600471063`, under the test tenant |
+| Connected in production | Messenger → *Tehman's Market*, Page id `1393807600471063`; Instagram → `rivonna.ai`, linked to that Page. Both under the test tenant |
 
 The credentials file also holds an **Instagram App ID and secret**. We do not use
 them — they belong to Instagram's own login, and we connect Instagram through
@@ -63,7 +63,7 @@ the Page.
 ## 3. The production test tenant
 
 A tenant called *Rivon Test Solar* with owner `test@tideover.site` exists in
-production for end-to-end checks. It has a real Page connected.
+production for end-to-end checks. It has a real Page and a real Instagram account connected.
 
 **Delete it before showing the product to anyone real.** When the Meta app goes
 Live, content created in development mode becomes visible to everyone.
@@ -112,8 +112,23 @@ it. A POST with no body still has to send the header. The client now does.
 ### Instagram "connected" but nothing appeared (25 Sep)
 The permissions were granted, but Meta returned the Page with **no Instagram
 account attached**: the account was not a professional account linked to the
-Page in the business portfolio. The dialog had warned: *"Instagram Pro account
-required"*. The return screen now says so plainly.
+Page. The dialog had warned: *"Instagram Pro account required"*. The return
+screen now says so plainly.
+
+**What was actually wrong:** `rivonna.ai` was linked to the *Rivona Ai* personal
+profile in **Accounts Center** — and that link means nothing to the messaging
+API. Meta only reports an Instagram account (`instagram_business_account`) when
+it is linked to the **Page**. Fixed by linking it from the Instagram phone app
+(Edit profile → Page → Connect → *Tehman's Market*), then connecting again in
+Rivon and ticking the Instagram account in the dialog. A real DM got the reply
+the same evening.
+**If Instagram will not connect, check the Page's Linked accounts, not Accounts
+Center.**
+
+### A Graph API Explorer token was pasted into a chat (25 Sep)
+Short-lived, read-only, and expired within the hour, so no action was needed.
+Still: **never paste a token into a chat** — describe the result or a
+screenshot with the token cropped out.
 
 ---
 
@@ -134,6 +149,11 @@ required"*. The return screen now says so plainly.
 | **The 24-hour window** | Free-form replies only within 24 hours of the customer's last message. | Later messages (quotations) need an approved WhatsApp template or a Messenger tag. |
 | **Embedded Signup v2 is deprecated 15 Oct 2026** | | We build against v4. |
 | **ManyChat's dialog looks different** | They use the old consumer login, grandfathered. | New business apps must use Facebook Login for Business. |
+| **Accounts Center is not a Page link** | Linking Instagram to your *personal profile* in Accounts Center does not attach it to the Page, so Meta returns the Page with no Instagram and nothing connects. | Link it to the **Page**: Instagram app → Edit profile → **Page** → Connect, or Facebook as the Page → Settings → Linked accounts. |
+| **Instagram's website has no Page option** | Edit profile on instagram.com has no "Page" row. | Use the Instagram phone app, or Facebook's Linked accounts. |
+| **The login dialog remembers the last selection** | Facebook Login for Business reuses the Pages and Instagram accounts ticked last time — including a time when the Instagram account did not exist to tick. | Choose **Edit previous settings** in the dialog and tick the new asset. |
+| **Graph API Explorer tokens are per asset** | A token with `pages_read_engagement` still returns `"data": []` from `me/accounts`, or error `#10` on the Page, if the Page was not ticked when it was generated. | Regenerate, *Edit previous settings*, tick the Page. Or skip the Explorer and look at the Page's Linked accounts screen. |
+| **Instagram testers in development mode** | A DM is only delivered if the sender's Instagram is linked (Accounts Center) to a Facebook account with a role on the app. You cannot test by DMing the business account from itself. | Test from a second Instagram account belonging to an app Tester. The DM may land in the business's **Requests** folder; the reply still goes out. |
 
 ---
 

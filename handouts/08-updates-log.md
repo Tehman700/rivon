@@ -19,6 +19,14 @@ professional account linked to the Page. The return screen now explains this
 when someone pressed *Connect Instagram*, and stays quiet when they pressed
 *Connect Facebook*. (`946b757`)
 
+**Instagram works end to end in production.** The cause of the failed connect
+was a setup step, not code: `rivonna.ai` was linked to a personal profile in
+Accounts Center, but not to the *Tehman's Market* Page, and Meta only returns an
+Instagram account through the Page link. Switched it to a Business account,
+linked it to the Page from the Instagram phone app, allowed message access,
+connected again in Rivon — and a real DM got the automated reply. The traps
+found on the way are in [`07-memory.md`](07-memory.md) §5.
+
 **Handouts written** — this folder.
 
 ---

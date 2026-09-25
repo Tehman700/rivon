@@ -11,7 +11,8 @@ week old, treat everything below as suspect until checked.
 
 The foundations, the business configuration, and the **entire messaging
 transport layer** are built, tested and live in production in Frankfurt. A
-customer can message a connected Facebook Page and receive an automated reply,
+customer can message a connected Facebook Page **or its linked Instagram
+account** and receive an automated reply,
 end to end, through signed webhooks, tenant routing, deduplication and an
 outbound dispatcher. What that reply *says* is still a placeholder: the
 conversation engine — the part that qualifies leads — is the next major piece
@@ -34,7 +35,7 @@ Verified against the live system, not just in tests.
 | Channels page (connect / disconnect) | ✅ Live | Used by hand |
 | **Facebook Messenger: connect → receive → reply** | ✅ **Working** | A real message to *Tehman's Market* got the automated reply, 25 Sep |
 | Webhook security | ✅ Live | Handshake echoes on all three channels; unsigned, mis-signed and tampered posts refused |
-| Instagram | ⚠️ Code ready, **not connected** | No Instagram professional account is linked to the Page yet — a setup step, not a bug |
+| **Instagram: connect → receive → reply** | ✅ **Working** | A real DM to `rivonna.ai` got the automated reply, 25 Sep. The blocker was a setup step, not a bug — see [`07-memory.md`](07-memory.md) §4 |
 | WhatsApp | ⚠️ Backend ready, **no button yet** | The browser half of Embedded Signup is not built |
 | Lead qualification, feasibility, quotes | ❌ Not built | Phase 2 onwards |
 
@@ -68,7 +69,7 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | Database | Neon Postgres, Frankfurt — migrations at **0012** |
 | Code on the server | Must be `946b757` or later for the Instagram explanation fix |
 | Meta app | **Rivon**, App ID `1027179017015673`, Business type, **Development mode** |
-| Connected accounts | 1 — Messenger, *Tehman's Market*, under the test tenant |
+| Connected accounts | 2, under the test tenant — Messenger (*Tehman's Market*) and Instagram (`rivonna.ai`, linked to that Page) |
 
 ---
 
@@ -78,12 +79,11 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 
 | Item | Why it matters |
 |---|---|
-| Link an Instagram professional account to *Tehman's Market* in Meta Business Suite | Instagram cannot connect until the Page has one |
 | Pull `946b757` on the server and rebuild | Picks up the clearer Instagram message |
 | **Rotate the OpenAI API key** | It was pasted into a chat; treat it as exposed before Phase 2 uses it |
 | **Replace the root AWS access keys** with the `rivon-deployer` IAM user | Root keys should not be on a laptop |
 | Decide which EU country launches first | Spec §15.12: decides whether web widget + email outrank WhatsApp |
-| Delete the production test tenant before showing anyone real | It holds test data and a real Page connection |
+| Delete the production test tenant before showing anyone real | It holds test data and real Page and Instagram connections |
 
 ### Waiting on code
 

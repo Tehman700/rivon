@@ -164,7 +164,8 @@ containers and separate logs.
 | Stored, but the worker is silent | The relay is not running — check its log |
 | `giving up on reply` in the worker | Meta refused the send; the line says why |
 | Channels page says *Needs reconnecting* | The customer revoked access at Meta, or the token died |
-| Instagram "connects" but is not listed | The Page has no Instagram professional account linked |
+| Instagram "connects" but is not listed | The Instagram account is not linked **to the Page**. A link to a personal profile in Accounts Center does not count — check the Page's Settings → Linked accounts. See [`09-channels-meta.md`](09-channels-meta.md) §5 |
+| Instagram DM, no reply, nothing in the API log | The sender has no role on the Meta app (development mode), or the app's Instagram webhook `messages` field is not subscribed |
 | `migrate` exits non-zero | The log names the failing step. Nothing else starts — on purpose |
 
 ---

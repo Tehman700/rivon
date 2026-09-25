@@ -143,15 +143,31 @@ says so.
 | Channel | Connect | Receive | Reply | Blocking |
 |---|---|---|---|---|
 | **Messenger** | ✅ | ✅ | ✅ | Nothing — working in production |
-| **Instagram** | ✅ code | ✅ code | ✅ code | An Instagram professional account must be linked to *Tehman's Market* |
+| **Instagram** | ✅ | ✅ | ✅ | Nothing — working in production (`rivonna.ai`, since 25 Sep) |
 | **WhatsApp** | 🟡 backend only | ✅ code | ✅ code | The dashboard button (JS SDK + browser event) |
 
 ### To connect Instagram
 
-1. Meta Business Suite → *Tehman's Market* → Settings → Accounts → **Instagram accounts** → Add.
-2. The account must be **Business or Creator**, not personal.
-3. In the Instagram app: Settings → Messages and story replies → Message controls → **allow access to messages**.
-4. Press **Connect** on the Instagram card again.
+What a business has to do once, before pressing Connect. This is what we did
+for `rivonna.ai`, and it is what a pilot installer will need to be told.
+
+1. **Professional account.** Instagram app → ☰ → *Account type and tools* →
+   *Switch to professional account* → **Business** (Creator also works). If it
+   offers *Switch to personal account*, it already is one.
+2. **Link it to the Page — not to a person.** Instagram phone app → *Edit
+   profile* → *Public business information* → **Page** → *Connect or create* →
+   choose the Page. (Or on Facebook, acting as the Page: Settings → **Linked
+   accounts** → Instagram → Connect.) A link in **Accounts Center** is between
+   the Instagram account and a personal profile and does **not** count;
+   instagram.com has no Page option at all.
+3. **Allow message access.** Instagram app → ☰ → *Messages and story replies*
+   → *Message controls* → *Connected tools* → **Allow access to messages**.
+4. **Connect in Rivon.** Press **Connect** on the Instagram card. If Facebook
+   offers *Edit previous settings*, take it — it otherwise reuses the last
+   selection. Tick the Page **and** the Instagram account.
+5. **Test** from a *different* Instagram account whose owner has a role on the
+   Meta app (development mode). The first DM may sit in the business's
+   *Requests* folder; the reply still goes out.
 
 ---
 
