@@ -5,8 +5,8 @@ Everything built so far, grouped by module and feature ID from
 trustworthy, and the commit that introduced it — `git show <hash>` explains the
 reasoning in full, because commit messages here are written to be read.
 
-**Totals at `946b757`:** 37 commits · 12 migrations · 18 tables · 27 API routes ·
-18 web pages · 406 tests.
+**Totals at `cf98ef1`:** 39 commits · 12 migrations · 18 tables · 28 API routes ·
+18 web pages · 409 tests.
 
 Legend: ✅ complete · 🟡 partial (what is missing is stated)
 
@@ -56,7 +56,7 @@ The whole transport layer for WhatsApp, Messenger and Instagram.
 | CHN-04 | ✅ | Idempotency: unique `(tenant_id, provider_message_id)`; a retried delivery is stored and enqueued once. | `b5c28db` |
 | CHN-05 | ✅ | Outbound dispatcher: claims each send by a dedupe key in the database, sends through the right adapter, tells a dead token or a closed 24-hour window apart from a retryable failure, gives up after five attempts, and keeps the reason on the row. | `21502c9` |
 | CHN-07 | ✅ | Connected accounts, with access tokens **encrypted** (Fernet) before they reach the database; revocation, re-authorisation status, and reconnecting in place. | `067d058` |
-| CHN-13 | ✅ | *New feature, not in the original list.* Self-serve connection, the ManyChat model: Facebook Login for Business for Pages and Instagram, WhatsApp Embedded Signup for WhatsApp. Checks the permissions actually granted, subscribes each account before storing it, and explains anything it had to leave out. | `f930aa4`, `ab865b4`, `946b757` |
+| CHN-13 | ✅ | *New feature, not in the original list.* Self-serve connection, the ManyChat model: Facebook Login for Business for Pages and Instagram, WhatsApp Embedded Signup for WhatsApp. Checks the permissions actually granted, subscribes each account before storing it, and explains anything it had to leave out. | `f930aa4`, `ab865b4`, `946b757`, `cf98ef1` |
 | — | ✅ | A placeholder **echo reply** so the path can be watched working. Identifies itself as an automated assistant. Replaced by the conversation engine in Phase 2. | `21502c9` |
 
 ## Dashboard and site — `web/`
@@ -65,7 +65,7 @@ The whole transport layer for WhatsApp, Messenger and Instagram.
 |---|---|---|---|
 | DASH-01 | ✅ | App shell: sign-in, sidebar, role-aware read-only notices, silent session refresh, and a **BFF proxy** so the browser never holds a token — cookie sessions, allow-listed paths, origin check, JSON-only writes. | `9ef4cb8` |
 | DASH-05 | ✅ | Configuration screens for everything in BIZ: profile, services and rate cards, pricing, service areas, inventory, crews, assistant and sizing. | `9ef4cb8`, `2b9ab8c`, `a4b99b9` |
-| — | ✅ | **Channels page**: three cards, connect and disconnect, status per account, and the return screen from Meta that reports what was connected and what was left out. | `aac3a81` |
+| — | ✅ | **Channels page**: three cards, connect and disconnect, status per account, and the return screen from Meta that reports what was connected and what was left out. WhatsApp's card opens Embedded Signup in Facebook's popup and shows the PIN once. | `aac3a81`, `cf98ef1` |
 | SITE-01 | ✅ | Public landing page with GSAP animations, sign-in in the header, request-access page. | `eb21a8b` |
 | SITE-03 | 🟡 | Privacy notice at `/privacy` and data-deletion instructions at `/data-deletion`. *Missing:* terms of service. A cookie banner is not needed: only two strictly necessary cookies are set. | `de5d58b`, `2155071` |
 | — | ✅ | Brand: logo traced from the supplied PNG into an SVG that works on light and dark; channel icons drawn inline. | `55b5c03`, `aac3a81` |

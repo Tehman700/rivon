@@ -1,6 +1,6 @@
 # Project status
 
-**As of 25 September 2026 — commit `946b757` — 406 tests passing.**
+**As of 25 September 2026 — commit `cf98ef1` — 409 tests passing.**
 
 Update this file every time a feature lands. If the date above is more than a
 week old, treat everything below as suspect until checked.
@@ -34,8 +34,8 @@ Verified against the live system, not just in tests.
 | Channels page (connect / disconnect) | ✅ Live | Used by hand |
 | **Facebook Messenger: connect → receive → reply** | ✅ **Working** | A real message to *Tehman's Market* got the automated reply, 25 Sep |
 | Webhook security | ✅ Live | Handshake echoes on all three channels; unsigned, mis-signed and tampered posts refused |
-| Instagram | ⚠️ Code ready, **not connected** | No Instagram professional account is linked to the Page yet — a setup step, not a bug |
-| WhatsApp | ⚠️ Backend ready, **no button yet** | The browser half of Embedded Signup is not built |
+| Instagram: connect | ✅ Connected | `rivonna.ai` linked to *Tehman's Market*, 25 Sep |
+| WhatsApp | 🟡 **Built, awaiting first live signup** | Button and backend deployed; needs the server pulled to `cf98ef1` and a spare number |
 | Lead qualification, feasibility, quotes | ❌ Not built | Phase 2 onwards |
 
 ---
@@ -66,9 +66,9 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 | Dashboard | `https://app.tideover.site` — Vercel `fra1` |
 | API | `https://api.tideover.site` — EC2 `eu-central-1`, Docker Compose, Caddy |
 | Database | Neon Postgres, Frankfurt — migrations at **0012** |
-| Code on the server | Must be `946b757` or later for the Instagram explanation fix |
+| Code on the server | Must be `cf98ef1` or later for WhatsApp |
 | Meta app | **Rivon**, App ID `1027179017015673`, Business type, **Development mode** |
-| Connected accounts | 1 — Messenger, *Tehman's Market*, under the test tenant |
+| Connected accounts | 2 — Messenger (*Tehman's Market*) and Instagram (`rivonna.ai`), under the test tenant |
 
 ---
 
@@ -78,8 +78,8 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 
 | Item | Why it matters |
 |---|---|
-| Link an Instagram professional account to *Tehman's Market* in Meta Business Suite | Instagram cannot connect until the Page has one |
-| Pull `946b757` on the server and rebuild | Picks up the clearer Instagram message |
+| Pull `cf98ef1` on the server and rebuild | WhatsApp needs the new `/channels/whatsapp/start` endpoint |
+| A spare phone number for WhatsApp | Embedded Signup registers a real number |
 | **Rotate the OpenAI API key** | It was pasted into a chat; treat it as exposed before Phase 2 uses it |
 | **Replace the root AWS access keys** with the `rivon-deployer` IAM user | Root keys should not be on a laptop |
 | Decide which EU country launches first | Spec §15.12: decides whether web widget + email outrank WhatsApp |
@@ -89,7 +89,6 @@ them out of order — see [`05-design-deviations.md`](05-design-deviations.md) �
 
 | Item | Size |
 |---|---|
-| WhatsApp button — Facebook JS SDK + `WA_EMBEDDED_SIGNUP` listener | ~1 day |
 | **Conversation engine (CNV-01..05, 09)** — the next major phase | Large |
 | Automated deauthorize and data-deletion callbacks from Meta | ~1 day |
 

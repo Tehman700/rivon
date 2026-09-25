@@ -14,8 +14,8 @@ everything else hangs off it.
 
 | Item | What is left | Size | Needs |
 |---|---|---|---|
-| Instagram | Link an Instagram professional account to *Tehman's Market* in Meta Business Suite, allow message access in the Instagram app, then press Connect | — | **You**, not code |
-| WhatsApp button | Load Facebook's JS SDK on the Channels page, call `FB.login` with the WhatsApp configuration, listen for the `WA_EMBEDDED_SIGNUP` browser event, post the code + ids to `/channels/whatsapp/complete`, show the PIN once. The backend is done and tested. | ~1 day | — |
+| Instagram live test | DM `rivonna.ai` from another account with a role on the app; confirm the reply | — | **You** |
+| WhatsApp live test | Built and deployed (`cf98ef1`). Pull on the server, connect a spare number, message it | — | **You** |
 | Meta callbacks | Automated **deauthorize** and **data-deletion** callbacks (signed requests). Today we have the instructions page, which is enough for development mode. | ~1 day | Before going Live |
 | CHN-06 | WhatsApp templates — needed to message a customer outside the 24-hour window, e.g. to send a quotation days later. Templates take Meta days to approve, so submit early. | M | QUOT-05 |
 | CHN-08 | Per-channel health check and auth-failure alerting | M | Not FYP |

@@ -19,7 +19,11 @@ professional account linked to the Page. The return screen now explains this
 when someone pressed *Connect Instagram*, and stays quiet when they pressed
 *Connect Facebook*. (`946b757`)
 
-**Handouts written** — this folder.
+**Handouts written** — this folder. (`893025d`)
+
+**Instagram connected** — `rivonna.ai`, once linked to the Page as a professional account.
+
+**WhatsApp button built** — Embedded Signup in Facebook's popup, pairing the code with the account ids from the browser event, PIN shown once. Found that SDK codes must be exchanged with no `redirect_uri` at all. (`cf98ef1`)
 
 ---
 
